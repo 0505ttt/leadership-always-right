@@ -43,3 +43,17 @@ it('releases a late pointer lock when the game paused while permission was pendi
  input.setEnabled(true);const lock=input.lock();input.setEnabled(false);resolve();
  expect(await lock).toBe(false);expect(doc.pointerLockElement).toBeNull();expect(doc.exitPointerLock).toHaveBeenCalledOnce();input.dispose();
 });
+
+it.each(['resolve','reject'] as const)('ignores an old lock request that later %ss after a new session obtained the lock',async(outcome)=>{
+ const win=new EventTarget(),doc=Object.assign(new EventTarget(),{pointerLockElement:null as EventTarget|null,hidden:false,exitPointerLock:vi.fn(()=>{doc.pointerLockElement=null;})});
+ vi.stubGlobal('window',win);vi.stubGlobal('document',doc);
+ let resolve!:()=>void,reject!:(reason:Error)=>void,calls=0;
+ const pending=new Promise<void>((yes,no)=>{resolve=yes;reject=no;});
+ const canvas=Object.assign(new EventTarget(),{requestPointerLock:async()=>{if(++calls===1)await pending;doc.pointerLockElement=canvas;}});
+ const settings:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1};
+ const pause=vi.fn(()=>input.setEnabled(false));const input=new GameInput(canvas as HTMLCanvasElement,settings,pause,()=>{});
+ input.setEnabled(true);const old=input.lock();input.setEnabled(false);input.setEnabled(true);
+ expect(await input.lock()).toBe(true);expect(doc.pointerLockElement).toBe(canvas);
+ if(outcome==='resolve')resolve();else reject(new Error('old request failed'));
+ expect(await old).toBe(false);expect(input.enabled).toBe(true);expect(doc.pointerLockElement).toBe(canvas);expect(pause).not.toHaveBeenCalled();input.dispose();
+});

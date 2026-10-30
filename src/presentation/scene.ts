@@ -3,6 +3,7 @@ import type { GameState, Page, Settings, Vec2, WorldDef } from '../contracts/gam
 import { makeTechnicalCharacter, makeTechnicalChair, makeTechnicalPot, type CharacterVisual } from './technical-character';
 import { inside } from '../world/query';
 import { resolveCamera } from '../gameplay/camera';
+import type { RuntimeAssets } from '../gameplay/assets';
 
 export class OfficeScene {
  readonly renderer:THREE.WebGLRenderer;
@@ -13,7 +14,9 @@ export class OfficeScene {
  private group=new THREE.Group();
  private characters=new Map<string,CharacterVisual>();
  private desks=new Map<string,THREE.Group>();
- private pots=new Map<string,THREE.Group>();
+ private pots=new Map<string,THREE.Object3D>();
+ private runtimeAssets:RuntimeAssets|null=null;
+ private runtimeInstances=new Set<THREE.Object3D>();
  private props=new Map<string,THREE.Object3D>();
  private exits=new Map<string,THREE.Group>();
  private wallMeshes=new Map<string,THREE.Mesh>();
@@ -31,6 +34,9 @@ export class OfficeScene {
  private look=new THREE.Vector3();
  private currentTarget=new THREE.Vector3();
  private warmed=false;
+ private compiling=0;
+ private retiredResources:(()=>void)[]=[];
+ private disposed=false;
  private resizeObserver:ResizeObserver;
  private screen:THREE.Mesh|null=null;
  private clockText:THREE.Sprite|null=null;
@@ -64,7 +70,21 @@ export class OfficeScene {
   const mat=new THREE.SpriteMaterial({map:this.text(text,512,128,color,'#213a32cc',44),depthTest:true});this.resources.add(mat);const sprite=new THREE.Sprite(mat);sprite.position.set(x,y,z);sprite.scale.set(w,w/4,1);this.group.add(sprite);return sprite;
  }
  private trackRoomMaterial(id:number,m:THREE.MeshStandardMaterial){const all=this.roomMaterials.get(id)??[];all.push(m);this.roomMaterials.set(id,all);m.userData.baseColor=m.color.clone();return m;}
+ useRuntimeAssets(assets:RuntimeAssets){this.runtimeAssets=assets;}
+ private runtimeAsset(id:string,fallback:()=>THREE.Object3D){
+  if(!this.runtimeAssets)return fallback();
+  const instance=this.runtimeAssets.instantiate(id);this.runtimeInstances.add(instance);return instance;
+ }
+ private character(boss=false,tint?:number){
+  const visual=makeTechnicalCharacter(boss,tint);
+  if(this.runtimeAssets){
+   // These placeholder chair meshes have never been uploaded; keep the control/visibility root.
+   visual.chair.clear();visual.chair.add(this.runtimeAsset('chair-v1',makeTechnicalChair));
+  }
+  return visual;
+ }
  load(world:WorldDef){
+  if(this.disposed)return;
   this.clear();this.world=world;
   const brass=this.material(0xb8a47a,.5,.35),metal=this.material(0x485b55,.5,.55),wood=this.material(0xb8a17c),dark=this.material(0x25453d),white=this.material(0xe1e3cf);
   for(const room of world.rooms){
@@ -74,7 +94,7 @@ export class OfficeScene {
    for(let x=-3;x<=3;x+=1.5)this.box(this.group,.012,.006,room.d-.25,room.x+x,.001,room.z,carpet);
    const wallMat=this.trackRoomMaterial(room.id,this.material(0xcdd6bf));
    for(const w of world.walls.filter(w=>w.roomId===room.id)){
-    const mesh=this.box(this.group,w.w,w.crawl?w.height-.95:w.height,w.d,w.x,w.crawl?(w.height+.95)/2:w.height/2,w.z,wallMat.clone());this.resources.add(mesh.material as THREE.Material);this.wallMeshes.set(w.id,mesh);
+    const mesh=this.box(this.group,w.w,w.crawl?w.height-.95:w.height,w.d,w.x,w.crawl?(w.height+.95)/2:w.height/2,w.z,this.trackRoomMaterial(room.id,wallMat.clone()));this.resources.add(mesh.material as THREE.Material);this.wallMeshes.set(w.id,mesh);
     if(!w.crawl){this.box(this.group,w.w+.015,.14,w.d+.015,w.x,.08,w.z,dark);this.box(this.group,w.w+.015,.04,w.d+.015,w.x,2.55,w.z,brass);}
    }
    const ceiling=this.box(this.group,room.w-.3,.1,room.d-.3,room.x,2.9,room.z,this.trackRoomMaterial(room.id,this.material(0xa7b3a1)));this.ceilings.set(room.id,ceiling);
@@ -102,12 +122,12 @@ export class OfficeScene {
    const screen=this.sign(top,desk.home?'18:00  /  豆包':'Q4 项目进度',0,.43,.12,.66,.37,Math.PI,'#bddec4','#162d27');if(desk.home)this.screen=screen;
    this.box(top,.48,.025,.18,0,.067,-.16,dark);this.box(top,.07,.025,.1,.36,.07,-.17,metal);
    this.box(top,.13,.18,.13,-.58,.14,.2,white);
-   const chair=makeTechnicalChair();chair.position.set(desk.seat.x,0,desk.seat.z);chair.rotation.y=desk.yaw;this.group.add(chair);chair.userData.deskId=desk.id;
+   const chair=this.runtimeAsset('chair-v1',makeTechnicalChair);chair.position.set(desk.seat.x,0,desk.seat.z);chair.rotation.y=desk.yaw;this.group.add(chair);chair.userData.deskId=desk.id;
    if(desk.home){const ring=new THREE.Mesh(new THREE.RingGeometry(.89,.91,40),new THREE.MeshBasicMaterial({color:0x9ab394,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(desk.seat.x,.01,desk.seat.z);this.group.add(ring);const label=this.sprite('我的工位',desk.x,1.55,desk.z,1.2);this.labels.push({object:label,point:desk,range:7});}
   }
-  const player=makeTechnicalCharacter(false);this.group.add(player.root);this.characters.set('player',player);
-  const boss=makeTechnicalCharacter(true);boss.root.scale.setScalar(1.04);this.group.add(boss.root);this.characters.set('boss',boss);
-  for(const [i,c] of world.colleagues.entries()){const v=makeTechnicalCharacter(false,[0xc8d3be,0xa8bdad,0xc8b6a2,0xb7c7c8][i]);v.root.position.set(c.x,0,c.z);v.root.rotation.y=c.yaw;this.group.add(v.root);this.characters.set(c.id,v);}
+  const player=this.character(false);this.group.add(player.root);this.characters.set('player',player);
+  const boss=this.character(true);boss.root.scale.setScalar(1.04);this.group.add(boss.root);this.characters.set('boss',boss);
+  for(const [i,c] of world.colleagues.entries()){const v=this.character(false,[0xc8d3be,0xa8bdad,0xc8b6a2,0xb7c7c8][i]);v.root.position.set(c.x,0,c.z);v.root.rotation.y=c.yaw;this.group.add(v.root);this.characters.set(c.id,v);}
   for(const s of world.stations){
    const g=new THREE.Group();g.position.set(s.x,0,s.z);g.rotation.y=s.yaw;this.group.add(g);
    this.box(g,.48,1.22,.38,0,.61,0,dark);this.sign(g,'下班打卡',0,.98,-.2,.42,.15,Math.PI,'#d0efc8','#214c3c');this.sign(g,'18:00',0,.78,-.2,.37,.18,Math.PI,'#b9f7c2','#0a2019');this.box(g,.17,.09,.05,0,.5,-.23,brass);
@@ -127,13 +147,40 @@ export class OfficeScene {
    }else {const g=new THREE.Group();this.box(g,.55,.55,.55,0,.275,0,this.material(0xac8a60));this.box(g,.12,.008,.56,0,.555,0,this.material(0xc3ad7e));v=g;}
    this.group.add(v);this.props.set(p.id,v);
   }
-  for(const id of ['pot-0','pot-1']){const p=makeTechnicalPot();this.group.add(p);this.pots.set(id,p);}
+  for(const id of ['pot-0','pot-1']){const p=this.runtimeAsset('pot-v1',makeTechnicalPot);p.visible=false;this.group.add(p);this.pots.set(id,p);}
   const r=world.rooms.find(r=>r.id===1)!;this.clockText=this.sprite('18:00',r.x-2,2.35,r.z-7,1.3,'#e9d7a6');
   this.currentTarget.set(world.spawn.x,1.25,world.spawn.z);this.warmed=false;
  }
  updateSettings(settings:Settings){this.settings=settings;this.resize();}
  resize(){const w=window.innerWidth,h=window.innerHeight;const maxPixels=this.settings.quality==='low'?1280*720:this.settings.quality==='medium'?1920*1080:2560*1440;const ratio=Math.min(window.devicePixelRatio,Math.sqrt(maxPixels/(w*h)));this.renderer.setPixelRatio(ratio);this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
- async prepare(){if(!this.warmed){await this.renderer.compileAsync(this.scene,this.camera);this.warmed=true;}this.renderer.render(this.scene,this.camera);}
+ async prepare(){
+  if(this.disposed)return;
+  const group=this.group;
+  if(!this.warmed){
+   const textures=new Set<THREE.Texture>();
+   group.traverse(object=>{if(object instanceof THREE.Mesh||object instanceof THREE.Line||object instanceof THREE.Sprite){for(const material of Array.isArray(object.material)?object.material:[object.material])for(const value of Object.values(material))if(value instanceof THREE.Texture)textures.add(value);}});
+   for(const texture of textures)this.renderer.initTexture(texture);
+   await this.compile(this.scene);if(this.disposed||group!==this.group)return;
+   // Compile the alternate shader without changing live walls while the frame loop is running.
+   const wall=this.wallMeshes.values().next().value;
+   if(wall){
+    const material=(wall.material as THREE.MeshStandardMaterial).clone();material.transparent=true;material.opacity=.2;material.depthWrite=false;this.resources.add(material);
+    const probe=new THREE.Mesh(this.boxGeometry,material);
+    await this.compile(probe,this.scene);if(this.disposed||group!==this.group)return;
+   }
+   this.warmed=true;
+  }
+  this.renderer.render(this.scene,this.camera);
+ }
+ private async compile(object:THREE.Object3D,targetScene?:THREE.Scene){
+  this.compiling++;
+  try{await this.renderer.compileAsync(object,this.camera,targetScene);}
+  finally{
+   this.compiling--;
+   if(this.compiling===0)for(const release of this.retiredResources.splice(0))release();
+  }
+ }
+ private releaseWhenIdle(release:()=>void){if(this.compiling>0)this.retiredResources.push(release);else release();}
  render(state:GameState,yaw:number,pitch:number,page:Page,dt:number){
   if(!this.world)return;const world=this.world,time=state.elapsed;
   for(const room of world.rooms){const lit=room.permanentLight||state.lights[room.id];this.lamps.get(room.id)!.intensity=lit?25:0;
@@ -142,16 +189,19 @@ export class OfficeScene {
    this.flows.get(room.id)!.visible=state.flowRooms.includes(room.id);
    const ceiling=this.ceilings.get(room.id)!;const clearance=state.pressureRooms.includes(room.id)?(state.pressureHeights[room.id]??1.6):2.8;ceiling.position.y=clearance+.05;
   }
-  for(const w of world.walls){const mesh=this.wallMeshes.get(w.id)!;const m=mesh.material as THREE.MeshStandardMaterial;const transparent=state.transparentWalls.includes(w.id);m.transparent=transparent;m.opacity=transparent?.2:1;m.depthWrite=!transparent;}
+  for(const w of world.walls){const mesh=this.wallMeshes.get(w.id)!;const m=mesh.material as THREE.MeshStandardMaterial;const transparent=state.transparentWalls.includes(w.id);if(m.transparent!==transparent){m.transparent=transparent;m.needsUpdate=true;}m.opacity=transparent?.2:1;m.depthWrite=!transparent;}
   for(const d of world.desks)this.desks.get(d.id)!.position.y=state.deskHeights[d.id]??.75;
   for(const e of world.exits){const g=this.exits.get(e.id)!;g.visible=!state.openedExits.includes(e.id);}
   const player=this.characters.get('player')!;player.root.position.set(state.player.x,state.player.y,state.player.z);player.root.rotation.y=state.player.yaw;player.update(state.player.pose,state.player.moving,state.player.sprinting,time,state.player.potInHand||!!state.player.holding);
   const boss=this.characters.get('boss')!;boss.root.position.set(state.boss.x,0,state.boss.z);boss.root.rotation.y=state.boss.yaw;const bossRoom=world.rooms.find(r=>inside(state.boss,r))?.id??-1;const bossCeiling=state.pressureRooms.includes(bossRoom)?(state.pressureHeights[bossRoom]??1.6):2.8;boss.update(bossCeiling<1.85?'crouching':'standing',true,state.boss.mode==='chase',time,false);
   for(const c of state.colleagues){const v=this.characters.get(c.id)!;v.update('working',false,false,time+c.x,false);v.head.rotation.y=c.grudge?.35:Math.sin(time*.3+c.x)*.12;v.rightArm.rotation.x=c.reportAt!==null?-2.1:v.rightArm.rotation.x;}
-  // Home empty chair is hidden whenever player is attached; no extra copy of the rolling chair follows behind.
-  for(const child of this.group.children)if(child.userData.deskId==='home')child.visible=!state.player.sticky&&state.player.pose!=='working';
+  // Each occupied seat is represented by its actor's chair; a sticky player took the home chair along.
+  const occupiedSeats=new Set(state.colleagues.map(colleague=>colleague.deskId));
+  if(state.player.sticky)for(const desk of world.desks)if(desk.home)occupiedSeats.add(desk.id);
+  if(state.player.pose==='working')for(const desk of world.desks)if(Math.hypot(state.player.x-desk.seat.x,state.player.z-desk.seat.z)<.4)occupiedSeats.add(desk.id);
+  for(const child of this.group.children)if(child.userData.deskId)child.visible=!occupiedSeats.has(child.userData.deskId);
   for(const p of state.props){const v=this.props.get(p.id);if(!v)continue;v.scale.setScalar(p.scale);if(p.held){player.hand.updateWorldMatrix(true,false);player.hand.getWorldPosition(v.position);v.position.y+=.12;}else v.position.set(p.x,p.y??0,p.z);}
-  for(const pot of state.pots){let v=this.pots.get(pot.id);if(!v){v=makeTechnicalPot();this.pots.set(pot.id,v);this.group.add(v);}const owner=this.characters.get(pot.owner);if(!owner){v.visible=false;continue;}v.visible=true;
+  for(const pot of state.pots){let v=this.pots.get(pot.id);if(!v){v=this.runtimeAsset('pot-v1',makeTechnicalPot);this.pots.set(pot.id,v);this.group.add(v);}const owner=this.characters.get(pot.owner);if(!owner){v.visible=false;continue;}v.visible=true;
    const seated=pot.owner!=='player'||state.player.pose==='working'||state.player.sticky;
    const held=pot.phase==='held'||pot.phase==='drawing';const anchor=held?owner.hand:seated?owner.crown:owner.back;anchor.updateWorldMatrix(true,false);anchor.getWorldPosition(v.position);
    v.rotation.set(seated||held?0:Math.PI/2,0,0);
@@ -175,7 +225,25 @@ export class OfficeScene {
   const clock=`18:${Math.floor(state.elapsed/60).toString().padStart(2,'0')}`;if(this.clockText&&clock!==this.lastClock){this.lastClock=clock;const mat=this.clockText.material as THREE.SpriteMaterial;const old=mat.map;mat.map=this.text(clock);if(old){old.dispose();this.resources.delete(old);}}
   this.renderer.render(this.scene,this.camera);
  }
- getMetrics(){const gl=this.renderer.getContext();const ext=gl.getExtension('WEBGL_debug_renderer_info');return {renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),drawingBuffer:{width:gl.drawingBufferWidth,height:gl.drawingBufferHeight},css:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,pixelRatio:this.renderer.getPixelRatio(),drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,memory:this.renderer.info.memory};}
- clear(){this.scene.remove(this.group);this.group.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Line){if(o.geometry!==this.boxGeometry)o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];for(const m of mats)m.dispose();}});for(const r of this.resources)r.dispose();this.resources.clear();this.group=new THREE.Group();this.scene.add(this.group);this.characters.clear();this.desks.clear();this.pots.clear();this.props.clear();this.exits.clear();this.wallMeshes.clear();this.ceilings.clear();this.roomMaterials.clear();this.lamps.clear();this.flows.clear();this.switches.clear();this.labels=[];this.lastClock='';}
- dispose(){this.clear();this.resizeObserver.disconnect();this.renderer.dispose();this.canvas.remove();}
+ getMetrics(){const gl=this.renderer.getContext();const ext=gl.getExtension('WEBGL_debug_renderer_info');return {renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),drawingBuffer:{width:gl.drawingBufferWidth,height:gl.drawingBufferHeight},css:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,pixelRatio:this.renderer.getPixelRatio(),drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,programs:this.renderer.info.programs?.length??0,memory:{...this.renderer.info.memory}};}
+ clear(){
+  const group=this.group,resources=this.resources,instances=this.runtimeInstances,assets=this.runtimeAssets;
+  this.scene.remove(group);this.resources=new Set();this.runtimeInstances=new Set();
+  // Three polls material programs until compileAsync settles; detaching is safe, disposal is not.
+  this.releaseWhenIdle(()=>{
+   group.traverse(o=>{if(!o.userData.runtimeAssetOwned&&(o instanceof THREE.Mesh||o instanceof THREE.Line||o instanceof THREE.Sprite)){
+    if(!(o instanceof THREE.Sprite)&&o.geometry!==this.boxGeometry)resources.add(o.geometry);
+    for(const m of Array.isArray(o.material)?o.material:[o.material])resources.add(m);
+   }});
+   for(const instance of instances)assets?.releaseInstance(instance);instances.clear();
+   for(const resource of resources)resource.dispose();resources.clear();
+  });
+  this.group=new THREE.Group();this.scene.add(this.group);this.world=null;this.warmed=false;
+  this.characters.clear();this.desks.clear();this.pots.clear();this.props.clear();this.exits.clear();this.wallMeshes.clear();this.ceilings.clear();this.roomMaterials.clear();this.lamps.clear();this.flows.clear();this.switches.clear();this.labels=[];this.lastClock='';this.screen=null;this.clockText=null;
+ }
+ dispose(){
+  if(this.disposed)return;
+  this.disposed=true;this.clear();this.resizeObserver.disconnect();this.canvas.remove();
+  this.releaseWhenIdle(()=>this.renderer.dispose());
+ }
 }

@@ -51,7 +51,7 @@ function aimActor(state: GameState, query: WorldQuery): {id: string;name: string
   return candidates.find(candidate => {
     const ahead = forwardProjection(candidate.point,from,to);
     return ahead > 0.1 && ahead <= 6 && pointSegmentDistance(candidate.point, from, to) < 0.58
-      && query.lineOfSight(from, candidate.point, 1.15, state);
+      && query.lineOfSight(from, candidate.point, 1.15, state,'solid');
   }) ?? null;
 }
 
@@ -87,7 +87,7 @@ function nearbyLanding(state:GameState,world:WorldDef,query:WorldQuery,origin:Ve
   for(const offset of [0,.4,.8,1.2,1.6])for(let index=0;index<(offset?16:1);index++) {
     const angle=index*Math.PI/8,delta={x:Math.sin(angle)*offset,z:Math.cos(angle)*offset};
     const candidate={x:origin.x+delta.x,z:origin.z+delta.z};
-    if(!safeRestPoint(state,world,query,candidate,radius)||!query.lineOfSight(origin,candidate,.6,state))continue;
+    if(!safeRestPoint(state,world,query,candidate,radius)||!query.lineOfSight(origin,candidate,.6,state,'solid'))continue;
     if(distance(query.move(origin,delta,radius,height,state),candidate)<.001)return candidate;
   }
   return null;
@@ -101,7 +101,7 @@ export function legalDrop(state: GameState, world: WorldDef, query: WorldQuery, 
   for (const length of [0.9, 1.25, 1.6]) {
     for (const offset of [0, 0.65, -0.65, 1, -1]) {
       const candidate = {x:origin.x + direction.x * length + right.x * offset,z:origin.z + direction.z * length + right.z * offset};
-      if (safeRestPoint(state,world,query,candidate,radius) && query.lineOfSight(origin,candidate,0.6,state)) return candidate;
+      if (safeRestPoint(state,world,query,candidate,radius) && query.lineOfSight(origin,candidate,0.6,state,'solid')) return candidate;
     }
   }
   return null;
@@ -162,7 +162,7 @@ export function handleObjectInput(state: GameState, input: InputFrame, world: Wo
       const candidate = {x:from.x + direction.x * length,z:from.z + direction.z * length};
       const home = world.desks.find(desk => desk.home)?.seat ?? world.spawn;
       if (distance(candidate,home)<1.4 || world.doors.some(d=>distance(candidate,d)<1.3) || world.exits.some(e=>distance(candidate,e)<1.6)) continue;
-      if (clearOfActors(state,candidate,propRadius(prop)) && query.lineOfSight(from,candidate,1.1,state) && query.validPlacement(candidate,propRadius(prop),state)) { to=candidate; break; }
+      if (clearOfActors(state,candidate,propRadius(prop)) && query.lineOfSight(from,candidate,1.1,state,'solid') && query.validPlacement(candidate,propRadius(prop),state)) { to=candidate; break; }
     }
     if (!to) { announceMessage(state,'前方没有安全落点，物件仍在手里。'); return; }
     if (aimActor(state,query)) explicitAction(state,'throw');
@@ -229,7 +229,7 @@ export function updateObjects(state: GameState, dt: number, world: WorldDef, que
       pot.progress=Math.min(1,pot.progress+dt/.5);
       const from={x:lerp(pot.from.x,pot.to.x,old),z:lerp(pot.from.z,pot.to.z,old)};
       const to={x:lerp(pot.from.x,pot.to.x,pot.progress),z:lerp(pot.from.z,pot.to.z,pot.progress)};
-      if(!query.lineOfSight(from,to,1.15,state)){startReturn(state,pot,from);continue;}
+      if(!query.lineOfSight(from,to,1.15,state,'solid')){startReturn(state,pot,from);continue;}
       const hit=[{id:'boss',point:state.boss},...state.colleagues.map(c=>({id:c.id,point:c}))]
         .filter(actor=>{
           // Segment-distance clamps to its start: without the release-ray check,
@@ -237,7 +237,7 @@ export function updateObjects(state: GameState, dt: number, world: WorldDef, que
           const ahead=forwardProjection(actor.point,pot.from,pot.to);
           return actor.id!==pot.owner&&ahead>.1&&ahead<=6
             &&pointSegmentDistance(actor.point,from,to)<.58
-            &&query.lineOfSight(from,actor.point,1.15,state);
+            &&query.lineOfSight(from,actor.point,1.15,state,'solid');
         })
         .sort((a,b)=>distance(from,a.point)-distance(from,b.point))[0];
       if(hit?.id==='boss') {
@@ -255,7 +255,7 @@ export function updateObjects(state: GameState, dt: number, world: WorldDef, que
   }
   syncPotOwners(state);
   if(!state.player.potId&&state.player.pose!=='dragged') {
-    const donor=state.colleagues.find(colleague=>distance(state.player,colleague)<.85&&query.lineOfSight(state.player,colleague,1.1,state));
+    const donor=state.colleagues.find(colleague=>distance(state.player,colleague)<.85&&query.lineOfSight(state.player,colleague,1.1,state,'solid'));
     const pot=donor&&state.pots.find(item=>item.owner===donor.id&&item.phase==='attached'&&item.cooldown<=0);
     if(pot&&attachPot(state,pot,'player')) announceMessage(state,'接触交接：这口锅，现在归你了。移动速度 −15%。',4);
   }

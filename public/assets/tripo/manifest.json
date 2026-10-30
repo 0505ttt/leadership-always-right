@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "source": "Tripo API, earlier Codex candidate retained for Kimi to adopt, adjust or replace; no approved art direction",
+  "version": 2,
+  "source": "Kimi first-batch runtime assets plus the retained earlier Codex employee candidate. Complete visual delivery remains in progress.",
   "assets": {
     "employee-base-v1": {
       "url": "assets/tripo/employee-base-v1.glb",
@@ -51,6 +51,60 @@
       ],
       "credits": 95,
       "integrationStatus": "retained candidate; awaiting Kimi selection; not integrated into the game"
+    },
+    "leader-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/leader-v1.glb",
+      "bytes": 2855700,
+      "sha256": "282393132879b268a9c8cd3001cd83f37e8d61dba7e2c52c876b350dc77563fb",
+      "triangles": 11632,
+      "textureSize": [2048, 2048],
+      "sizeMeters": [1.800, 1.850, 0.373],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": ["07c93937-226a-4136-97f4-5e695404d9da"],
+      "credits": null,
+      "integrationStatus": "static T-pose inspection asset; not used as the in-game leader; awaiting Kimi rig and animation"
+    },
+    "pot-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/pot-v1.glb",
+      "bytes": 2398416,
+      "sha256": "ad2da9f9753c2a94afa0e776a761b393a77d7d9c13b71b52addcd07f44818a01",
+      "triangles": 3656,
+      "textureSize": [2048, 2048],
+      "sizeMeters": [0.450, 0.196, 0.353],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": ["a3b71fea-e22d-4a58-adbf-a3e0105e9950"],
+      "credits": null,
+      "integrationStatus": "loaded as independent game prop; final character anchors and combined pose await Kimi"
+    },
+    "chair-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/chair-v1.glb",
+      "bytes": 4140944,
+      "sha256": "add8d12b3a3bac79d1c5ff4e2c5a84db804db1a0612cf65812f43ea05e38d215",
+      "triangles": 7360,
+      "textureSize": [2048, 2048],
+      "sizeMeters": [0.749, 1.100, 0.725],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": ["c61a6271-eddd-465c-bcd4-d27089ff08f2"],
+      "credits": null,
+      "integrationStatus": "loaded as independent chair; final character seating and animation await Kimi"
     }
   }
 }

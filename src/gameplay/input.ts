@@ -3,7 +3,7 @@ import type { InputFrame, Settings } from '../contracts/game';
 export class GameInput {
  yaw=0; pitch=-.08;
  private keys=new Set<string>();private pressed=new Set<string>();private mouse=new Set<number>();private shots=false;private disposers:(()=>void)[]=[];
- enabled=false; private phoneOpen=false;
+ enabled=false; private phoneOpen=false;private lockEpoch=0;
  constructor(private canvas:HTMLCanvasElement,private settings:Settings,private onPause:(reason?:string)=>void,private onPhone:()=>void,private onResume?:(key:'Escape'|'Enter')=>boolean){
   const listen=(target:EventTarget,type:string,listener:EventListener)=>{target.addEventListener(type,listener);this.disposers.push(()=>target.removeEventListener(type,listener));};
   listen(window,'keydown',((e:KeyboardEvent)=>{
@@ -28,9 +28,21 @@ export class GameInput {
   listen(document,'visibilitychange',(()=>{if(document.hidden){this.clear();if(this.enabled)this.onPause();}}) as EventListener);
  }
  updateSettings(settings:Settings){this.settings=settings;}
- async lock(){try{await this.canvas.requestPointerLock();if(!this.enabled||this.phoneOpen){if(document.pointerLockElement===this.canvas)document.exitPointerLock();return false;}if(document.pointerLockElement!==this.canvas)throw new Error('pointer lock unavailable');return true;}catch{if(this.enabled&&!this.phoneOpen)this.onPause('鼠标未能锁定。请按 Enter 或点击继续；浏览器需允许鼠标控制。');return false;}}
- setPhoneOpen(open:boolean){this.phoneOpen=open;this.clear();if(open){if(document.pointerLockElement===this.canvas)document.exitPointerLock();}else if(this.enabled)void this.lock();}
- setEnabled(enabled:boolean){this.enabled=enabled;if(!enabled){this.phoneOpen=false;this.clear();if(document.pointerLockElement===this.canvas)document.exitPointerLock();}}
+ async lock(){
+  const epoch=++this.lockEpoch;if(!this.enabled||this.phoneOpen)return false;
+  try{
+   await this.canvas.requestPointerLock();
+   if(!this.enabled||this.phoneOpen){if(document.pointerLockElement===this.canvas)document.exitPointerLock();return false;}
+   if(epoch!==this.lockEpoch)return false;
+   if(document.pointerLockElement!==this.canvas)throw new Error('pointer lock unavailable');return true;
+  }catch{
+   if(epoch!==this.lockEpoch||!this.enabled||this.phoneOpen)return false;
+   if(document.pointerLockElement===this.canvas)return true;
+   this.onPause('鼠标未能锁定。请按 Enter 或点击继续；浏览器需允许鼠标控制。');return false;
+  }
+ }
+ setPhoneOpen(open:boolean){this.phoneOpen=open;this.clear();if(open){this.lockEpoch++;if(document.pointerLockElement===this.canvas)document.exitPointerLock();}else if(this.enabled)void this.lock();}
+ setEnabled(enabled:boolean){this.enabled=enabled;if(!enabled){this.lockEpoch++;this.phoneOpen=false;this.clear();if(document.pointerLockElement===this.canvas)document.exitPointerLock();}}
  clear(){this.keys.clear();this.pressed.clear();this.mouse.clear();this.shots=false;}
  frame():InputFrame {
   const k=this.keys,p=this.pressed;

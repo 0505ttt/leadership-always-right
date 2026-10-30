@@ -112,7 +112,7 @@ function canInteract(state:GameState,candidate:Candidate,query:WorldQuery,requir
   if((candidate.kind==='clock'||candidate.kind==='exit')&&!litAt(state,state.player,query))return false;
   const direction=forward(state.player.yaw);
   if(requireFacing&&dist>.2&&((candidate.point.x-state.player.x)*direction.x+(candidate.point.z-state.player.z)*direction.z)/dist<.1)return false;
-  return query.lineOfSight(state.player,candidate.point,(candidate.kind==='prop'||candidate.kind==='push')?1.3:1.1,state);
+  return query.lineOfSight(state.player,candidate.point,(candidate.kind==='prop'||candidate.kind==='push')?1.3:1.1,state,'solid');
 }
 
 function cancelInteraction(state:GameState):void {

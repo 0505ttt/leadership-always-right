@@ -5,11 +5,14 @@ import { validateWorld } from './world/validate';
 import { OfficeScene } from './presentation/scene';
 import { GameInput } from './gameplay/input';
 import { FrameMetrics } from './gameplay/performance';
+import { RuntimeAssets } from './gameplay/assets';
 import { bindUI } from './ui/bindings';
 import type { Page, Settings, UICommand, UIModel } from './contracts/game';
 
 declare const __BUILD_COMMIT__:string;
 const version=__BUILD_COMMIT__;
+const runtimeAssets=new RuntimeAssets();
+const runtimeSpecs=['pot-v1','chair-v1'].map(id=>({id,url:`${import.meta.env.BASE_URL}assets/tripo/${id}.glb?v=${version}`}));
 const defaults:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1};
 let settings={...defaults};try{const saved=JSON.parse(localStorage.getItem('leadership-settings')??'null');if(saved&&typeof saved==='object')settings={...defaults,...saved};}catch{/* A blocked/corrupt preference store must not prevent local gameplay. */}
 let world=generateWorld(618),state=createGame(world),query=makeWorldQuery(world),page:Page='home';
@@ -32,10 +35,15 @@ function home(){loadingToken++;page='home';phone=false;input?.setEnabled(false);
 async function loadGame(seed:number){
  const token=++loadingToken;page='loading';input.setEnabled(false);loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
  try{
+  if(token!==loadingToken)return;
   let accepted=false;
   for(let attempt=0;attempt<20;attempt++){world=generateWorld((seed+attempt)>>>0);state=createGame(world);query=makeWorldQuery(world);const result=validateWorld(world,state,query);if(result.valid){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`));accepted=true;break;}}
   if(!accepted){world=generateWorld(618);state=createGame(world);query=makeWorldQuery(world);if(!validateWorld(world,state,query).valid)throw new Error('办公室校验失败，备用种子也未通过。');}
-  if(token!==loadingToken)return;loadingStage='准备角色、物件、灯光和规则效果';show();await new Promise(resolve=>requestAnimationFrame(resolve));
+  if(token!==loadingToken)return;
+  await runtimeAssets.preload(runtimeSpecs,({completed,total})=>{if(token===loadingToken){loadingStage=`读取本局模型与贴图 · ${completed}/${total}件已就绪`;show();}});
+  if(token!==loadingToken)return;scene.useRuntimeAssets(runtimeAssets);
+  loadingStage='准备角色、物件、灯光和规则效果';show();await new Promise(resolve=>requestAnimationFrame(resolve));
+  if(token!==loadingToken)return;
   scene.load(world);scene.render(state,state.player.yaw,input.pitch,'ready',1/60);await scene.prepare();if(token!==loadingToken)return;
   loadingStage='本局资源与场景已准备完成';page='ready';accumulator=0;show();
  }catch(e){if(token!==loadingToken)return;error=e instanceof Error?e.message:String(e);page='error';show();}

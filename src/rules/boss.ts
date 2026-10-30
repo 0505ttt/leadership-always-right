@@ -237,9 +237,9 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
   if(inspectLights(state,dt,world,query))return;
   if(boss.mode==='chase'&&runtime.orderActive) {
     if(sees) {
-      if(distance(boss,player)>1)moveBoss(state,boss.lastSeen!,4.1,dt,world,query);
+      if(distance(boss,player)>1||!query.lineOfSight(boss,player,playerSightHeight(state),state,'solid'))moveBoss(state,boss.lastSeen!,4.1,dt,world,query);
       else boss.yaw=Math.atan2(player.x-boss.x,player.z-boss.z);
-      if(player.protection<=0&&litAt(state,player,query)&&distance(boss,player)<=1.1&&query.lineOfSight(boss,player,playerSightHeight(state),state))boss.contactFor+=dt;
+      if(player.protection<=0&&litAt(state,player,query)&&distance(boss,player)<=1.1&&query.lineOfSight(boss,player,playerSightHeight(state),state,'solid'))boss.contactFor+=dt;
       else boss.contactFor=0;
       if(boss.contactFor>=.5)beginDrag(state,world,query);
     } else {boss.contactFor=0;boss.mode='search';}

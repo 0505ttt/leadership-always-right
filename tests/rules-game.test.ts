@@ -93,6 +93,22 @@ describe('perception, warning, capture and chairs',()=>{
     runtimeFor(state).orderActive=true;state.boss.mode='chase';run(state,world,query,.35);expect(state.boss.contactFor).toBeGreaterThan(.3);
     state.lights[0]=false;run(state,world,query,.3);expect(state.player.pose).not.toBe('dragged');expect(state.boss.contactFor).toBe(0);
   });
+  it('lets the leader see and pursue across a transparent partition without grabbing through it',()=>{
+    const {world}=fixture();world.walls.push({id:'transparent-grab',x:26,z:18.6,w:3,d:.08,height:2.8,roomId:0});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);state.transparentWalls.push('transparent-grab');
+    Object.assign(state.player,{x:26,z:19});Object.assign(state.boss,{x:26,z:18.2,yaw:0,mode:'chase'});runtimeFor(state).orderActive=true;
+    expect(query.lineOfSight(state.boss,state.player,1.05,state)).toBe(true);
+    stepGame(state,idle,1/60,world,query);expect(state.boss.mode).toBe('chase');
+    run(state,world,query,.3-1/60);expect(state.boss.lastSeen).toEqual({x:26,z:19});expect(state.boss.contactFor).toBe(0);expect(state.player.pose).toBe('standing');
+    let lateral=Math.abs(state.boss.x-26);
+    for(let frame=0;frame<480&&state.player.pose!=='dragged';frame++) {
+      const previous={x:state.boss.x,z:state.boss.z};stepGame(state,idle,1/60,world,query);
+      expect(query.lineOfSight(previous,state.boss,1.05,state,'solid')).toBe(true);
+      lateral=Math.max(lateral,Math.abs(state.boss.x-26));
+      if(state.boss.contactFor>0)expect(query.lineOfSight(state.boss,state.player,1.05,state,'solid')).toBe(true);
+    }
+    expect(lateral).toBeGreaterThan(1.7);expect(state.player.pose).toBe('dragged');expect(state.eventLog.some(event=>event.event==='boss:caught')).toBe(true);
+  });
   it('applies a completed light switch before a same-frame grab could finish',()=>{
     const {state,world,query}=fixture();stand(state);state.player.x=6;state.player.z=5.4;closeBoss(state);
     world.patrol=[{...state.boss}];runtimeFor(state).orderActive=true;state.boss.mode='chase';state.boss.contactFor=.25;
@@ -203,6 +219,54 @@ describe('pot conservation and delayed reports',()=>{
     query.lineOfSight=(a,b)=>!(Math.min(a.z,b.z)<18.5&&Math.max(a.z,b.z)>=18.5);
     stepGame(state,{...idle,throwPressed:true},1/60,world,query);run(state,world,query,1.5);
     expect(state.player.potId).not.toBeNull();expect(state.colleagues[2].grudge).toBe(false);expect(state.pots).toHaveLength(2);
+  });
+  it('sees through a transparent wall while it still blocks movement, aiming and pot flight',()=>{
+    const {world}=fixture();world.walls.push({id:'transparent-test',x:26,z:18.2,w:3,d:.2,height:2.8,roomId:0});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);state.transparentWalls.push('transparent-test');
+    state.player.x=26;state.player.z=17;state.player.yaw=0;const target=state.colleagues[2];target.x=26;target.z=19;
+    expect(query.lineOfSight(state.player,target,1.15,state)).toBe(true);
+    expect(query.move(state.player,{x:0,z:3},.3,1.75,state).z).toBeLessThan(18.2);
+    const pot=state.pots[0];Object.assign(pot,{owner:'player',phase:'held'});state.aiming=true;updateObjects(state,0,world,query);
+    const aimed=state.aimTarget;handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
+    for(let frame=0;frame<70;frame++)updateObjects(state,1/60,world,query);
+    expect(pot.owner).toBe('player');expect(pot.phase).toBe('attached');expect(target.grudge).toBe(false);expect(aimed).toContain('没有目标');
+  });
+  it('retains a box when all forward drop and throw points are beyond a transparent wall',()=>{
+    for(const action of ['drop','throw']) {
+      const {world}=fixture();world.walls.push({id:'transparent-test',x:26,z:18,w:3,d:.1,height:2.8,roomId:0});
+      const query=makeWorldQuery(world),state=createGame(world);stand(state);state.transparentWalls.push('transparent-test');
+      state.player.x=26;state.player.z=17.35;state.player.yaw=0;
+      const box=state.props.find(prop=>prop.kind==='box')!;box.held=true;state.player.holding=box.id;
+      if(action==='drop')dropHeld(state,world,query);else handleObjectInput(state,{...idle,throwPressed:true},world,query);
+      expect(state.player.holding).toBe(box.id);expect(box.held).toBe(true);expect(runtimeFor(state).propFlights.size).toBe(0);
+    }
+  });
+  it('does not perform a physical contact handoff through a transparent wall',()=>{
+    const {world}=fixture();world.walls.push({id:'transparent-test',x:20,z:19.65,w:3,d:.08,height:2.8,roomId:0});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);state.transparentWalls.push('transparent-test');
+    state.player.x=20;state.player.z=19.3;expect(query.lineOfSight(state.player,state.colleagues[0],1.1,state)).toBe(true);
+    updateObjects(state,.01,world,query);expect(state.player.potId).toBeNull();expect(state.pots[0].owner).toBe(state.colleagues[0].id);
+  });
+  it.each(['prop','light','desk'] as const)('blocks %s interaction through a transparent wall while vision remains clear',(kind)=>{
+    const {world}=fixture();
+    const point=kind==='prop'?world.props.find(prop=>prop.kind==='box')!:kind==='light'?world.rooms[0].switch:world.desks[0].seat;
+    world.walls.push({id:'transparent-interaction',x:point.x,z:point.z-.45,w:3,d:.1,height:2.8,roomId:0});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);state.transparentWalls.push('transparent-interaction');
+    Object.assign(state.player,{x:point.x,z:point.z-.9,yaw:0});
+    expect(query.lineOfSight(state.player,point,1.3,state)).toBe(true);
+    stepGame(state,{...idle,interact:true,interactPressed:true},1/60,world,query);run(state,world,query,.3,{interact:true});
+    expect(state.player.holding).toBeNull();expect(state.player.pose).toBe('standing');expect(state.lights[0]).toBe(true);expect(state.interaction).toBeNull();
+  });
+  it('keeps solid-mode throw rays above a low desk clear while its tabletop remains solid',()=>{
+    const {world}=fixture();world.desks.push({id:'throw-desk',x:26,z:19,roomId:0,seat:{x:26,z:18},yaw:0});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    state.player.x=26;state.player.z=17;state.player.yaw=0;const target=state.colleagues[2];target.x=26;target.z=21;
+    expect(query.lineOfSight(state.player,target,1.15,state,'solid')).toBe(true);
+    expect(query.lineOfSight(state.player,target,.75,state,'solid')).toBe(false);
+    const pot=state.pots[0];Object.assign(pot,{owner:'player',phase:'held'});
+    handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
+    for(let frame=0;frame<31&&pot.phase==='flying';frame++)updateObjects(state,1/60,world,query);
+    expect(pot.owner).toBe(target.id);expect(target.grudge).toBe(true);
   });
   it('reports a snapshot ten seconds later, never the new hidden position',()=>{
     const {state,world,query}=fixture();stand(state);const colleague=state.colleagues[2];colleague.grudge=true;state.player.x=colleague.x;state.player.z=colleague.z+3;
