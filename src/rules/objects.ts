@@ -72,19 +72,36 @@ function clearOfActors(state:GameState,point:Vec2,radius:number):boolean {
   return [state.player,state.boss,...state.colleagues].every(actor=>distance(actor,point)>radius+.32);
 }
 
+function safeRestPoint(state:GameState,world:WorldDef,query:WorldQuery,point:Vec2,radius:number):boolean {
+  const home=world.desks.find(desk=>desk.home)?.seat??world.spawn;
+  return distance(point,home)>=1.45
+    &&!world.doors.some(door=>distance(point,door)<1.3)
+    &&!world.exits.some(exit=>distance(point,exit)<1.6)
+    &&clearOfActors(state,point,radius)&&query.validPlacement(point,radius,state);
+}
+
+function nearbyLanding(state:GameState,world:WorldDef,query:WorldQuery,origin:Vec2,prop:PropState):Vec2|null {
+  const radius=propRadius(prop),height=prop.kind==='box'?.55:.4*prop.scale;
+  // A landing is independent of the player's current facing. Check all sides,
+  // within a small bounded radius, without moving the prop across a wall.
+  for(const offset of [0,.4,.8,1.2,1.6])for(let index=0;index<(offset?16:1);index++) {
+    const angle=index*Math.PI/8,delta={x:Math.sin(angle)*offset,z:Math.cos(angle)*offset};
+    const candidate={x:origin.x+delta.x,z:origin.z+delta.z};
+    if(!safeRestPoint(state,world,query,candidate,radius)||!query.lineOfSight(origin,candidate,.6,state))continue;
+    if(distance(query.move(origin,delta,radius,height,state),candidate)<.001)return candidate;
+  }
+  return null;
+}
+
 export function legalDrop(state: GameState, world: WorldDef, query: WorldQuery, origin:Vec2 = state.player, item?:PropState): Vec2 | null {
   const prop=item??state.props.find(candidate=>candidate.id===state.player.holding);
   const radius=prop?propRadius(prop):.35;
-  const home = world.desks.find(desk => desk.home)?.seat ?? world.spawn;
   const direction = forward(state.player.yaw);
   const right = {x:direction.z,z:-direction.x};
   for (const length of [0.9, 1.25, 1.6]) {
     for (const offset of [0, 0.65, -0.65, 1, -1]) {
       const candidate = {x:origin.x + direction.x * length + right.x * offset,z:origin.z + direction.z * length + right.z * offset};
-      if (distance(candidate, home) < 1.45) continue;
-      if (world.doors.some(door => distance(candidate, door) < 1.3)) continue;
-      if (world.exits.some(exit => distance(candidate, exit) < 1.6)) continue;
-      if (clearOfActors(state,candidate,radius) && query.validPlacement(candidate, radius, state) && query.lineOfSight(origin,candidate,0.6,state)) return candidate;
+      if (safeRestPoint(state,world,query,candidate,radius) && query.lineOfSight(origin,candidate,0.6,state)) return candidate;
     }
   }
   return null;
@@ -186,9 +203,7 @@ export function updateObjects(state: GameState, dt: number, world: WorldDef, que
     if (progress>=1) {
       // Actors can enter a reserved landing point during the flight. Relocate
       // only the small prop to a nearby valid rest point before enabling collision.
-      const radius=propRadius(prop);
-      const spot=clearOfActors(state,prop,radius)&&query.validPlacement(prop,radius,state)
-        ?copyPoint(prop):legalDrop(state,world,query,flight.to,prop);
+      const spot=nearbyLanding(state,world,query,flight.to,prop);
       if(!spot)continue;
       if(distance(prop,spot)>.01)logEvent(state,`prop:safe-landing:${prop.id}`);
       Object.assign(prop,spot);prop.y=0; prop.roomId=query.roomAt(prop)?.id??prop.roomId;

@@ -10,7 +10,8 @@ export function litAt(state: GameState, point: Vec2, query: WorldQuery): boolean
 function clearance(state: GameState, query: WorldQuery): number {
   const reported=query.clearance(state.player,state);
   const ceiling=reported<=state.player.y+.08?Infinity:reported;
-  return Math.min(ceiling,state.pressureRooms.includes(state.roomId)?1.6:Infinity)-state.player.y;
+  const pressure=state.pressureRooms.includes(state.roomId)?(state.pressureHeights[state.roomId]??1.6):Infinity;
+  return Math.min(ceiling,pressure)-state.player.y;
 }
 
 function updateLanding(state:GameState,query:WorldQuery,previousY:number):void {

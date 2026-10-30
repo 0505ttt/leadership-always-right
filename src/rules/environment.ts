@@ -115,7 +115,10 @@ function activate(state:GameState,rule:ActiveRule,world:WorldDef,query:WorldQuer
   rule.phase='active';rule.remaining=rule.duration;rule.age=0;
   if(rule.kind==='cake')state.props.find(prop=>prop.id===rule.targetId)!.large=true;
   if(rule.kind==='transparent'&&!state.transparentWalls.includes(rule.targetId))state.transparentWalls.push(rule.targetId);
-  if(rule.kind==='pressure'&&!state.pressureRooms.includes(rule.roomId))state.pressureRooms.push(rule.roomId);
+  if(rule.kind==='pressure') {
+    if(!state.pressureRooms.includes(rule.roomId))state.pressureRooms.push(rule.roomId);
+    state.pressureHeights[rule.roomId]=2.8;
+  }
   if(rule.kind==='flow'&&!state.flowRooms.includes(rule.roomId))state.flowRooms.push(rule.roomId);
   logEvent(state,`rule:${rule.kind}:active`);
 }
@@ -134,6 +137,13 @@ function restoreDesk(state:GameState,rule:ActiveRule,dt:number,world:WorldDef):b
   return next<=.751;
 }
 
+function safePressureHeight(state:GameState,roomId:number,desired:number,query:WorldQuery):number {
+  if(query.roomAt(state.player)?.id!==roomId)return desired;
+  // Controllable standing players can duck; seated and dragged players cannot.
+  const body=state.player.sticky||state.player.pose==='working'?1.42:state.player.pose==='dragged'?1.75:.9;
+  return Math.max(desired,state.player.y+body+.05);
+}
+
 export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query:WorldQuery):void {
   const runtime=runtimeFor(state);
   for(const rule of [...state.rules]) {
@@ -145,7 +155,12 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
     }
     if(rule.kind==='return')continue;
     if(rule.phase==='active') {
-      rule.remaining=Math.max(0,rule.remaining-dt);
+      if(rule.kind==='pressure') {
+        // Geometry, actors, camera and presentation all consume this same moving ceiling.
+        state.pressureHeights[rule.roomId]=safePressureHeight(state,rule.roomId,Math.max(1.6,2.8-1.2*clamp(rule.age,0,1)),query);
+        const holdTime=Math.max(0,rule.age-1)-Math.max(0,rule.age-dt-1);
+        rule.remaining=Math.max(0,rule.remaining-holdTime);
+      } else rule.remaining=Math.max(0,rule.remaining-dt);
       if(rule.kind==='cake') {
         const prop=state.props.find(item=>item.id===rule.targetId);
         if(prop){
@@ -168,8 +183,9 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
       else if(rule.kind==='transparent')state.transparentWalls=state.transparentWalls.filter(id=>id!==rule.targetId);
       else if(rule.kind==='flow')state.flowRooms=state.flowRooms.filter(id=>id!==rule.roomId);
       else if(rule.kind==='pressure'){
+        state.pressureHeights[rule.roomId]=safePressureHeight(state,rule.roomId,1.6+1.2*clamp(rule.age,0,1),query);
         complete=rule.age>=1;
-        if(complete)state.pressureRooms=state.pressureRooms.filter(id=>id!==rule.roomId);
+        if(complete){state.pressureRooms=state.pressureRooms.filter(id=>id!==rule.roomId);delete state.pressureHeights[rule.roomId];}
       }
       if(complete){state.rules=state.rules.filter(item=>item!==rule);runtime.rules.delete(rule.id);}
     }

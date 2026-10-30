@@ -140,13 +140,13 @@ export class OfficeScene {
    const mats=this.roomMaterials.get(room.id)??[];for(const m of mats)m.color.copy(m.userData.baseColor).multiplyScalar(lit?1:.4);
    const led=this.switches.get(room.id);if(led)(led.material as THREE.MeshBasicMaterial).color.set(lit?0x9aefb0:0xc17b45);
    this.flows.get(room.id)!.visible=state.flowRooms.includes(room.id);
-   const ceiling=this.ceilings.get(room.id)!;const target=state.pressureRooms.includes(room.id)?1.67:2.9;ceiling.position.y=THREE.MathUtils.damp(ceiling.position.y,target,6,dt);
+   const ceiling=this.ceilings.get(room.id)!;const clearance=state.pressureRooms.includes(room.id)?(state.pressureHeights[room.id]??1.6):2.8;ceiling.position.y=clearance+.05;
   }
   for(const w of world.walls){const mesh=this.wallMeshes.get(w.id)!;const m=mesh.material as THREE.MeshStandardMaterial;const transparent=state.transparentWalls.includes(w.id);m.transparent=transparent;m.opacity=transparent?.2:1;m.depthWrite=!transparent;}
   for(const d of world.desks)this.desks.get(d.id)!.position.y=state.deskHeights[d.id]??.75;
   for(const e of world.exits){const g=this.exits.get(e.id)!;g.visible=!state.openedExits.includes(e.id);}
   const player=this.characters.get('player')!;player.root.position.set(state.player.x,state.player.y,state.player.z);player.root.rotation.y=state.player.yaw;player.update(state.player.pose,state.player.moving,state.player.sprinting,time,state.player.potInHand||!!state.player.holding);
-  const boss=this.characters.get('boss')!;boss.root.position.set(state.boss.x,0,state.boss.z);boss.root.rotation.y=state.boss.yaw;boss.update(state.pressureRooms.includes(world.rooms.find(r=>inside(state.boss,r))?.id??-1)?'crouching':'standing',true,state.boss.mode==='chase',time,false);
+  const boss=this.characters.get('boss')!;boss.root.position.set(state.boss.x,0,state.boss.z);boss.root.rotation.y=state.boss.yaw;const bossRoom=world.rooms.find(r=>inside(state.boss,r))?.id??-1;const bossCeiling=state.pressureRooms.includes(bossRoom)?(state.pressureHeights[bossRoom]??1.6):2.8;boss.update(bossCeiling<1.85?'crouching':'standing',true,state.boss.mode==='chase',time,false);
   for(const c of state.colleagues){const v=this.characters.get(c.id)!;v.update('working',false,false,time+c.x,false);v.head.rotation.y=c.grudge?.35:Math.sin(time*.3+c.x)*.12;v.rightArm.rotation.x=c.reportAt!==null?-2.1:v.rightArm.rotation.x;}
   // Home empty chair is hidden whenever player is attached; no extra copy of the rolling chair follows behind.
   for(const child of this.group.children)if(child.userData.deskId==='home')child.visible=!state.player.sticky&&state.player.pose!=='working';

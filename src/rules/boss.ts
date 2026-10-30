@@ -63,7 +63,8 @@ function moveBoss(state:GameState,target:Vec2,speed:number,dt:number,world:World
   const direction={x:dx/length,z:dz/length};
   boss.yaw=Math.atan2(direction.x,direction.z);
   const room=query.roomAt(boss);
-  const low=room&&state.pressureRooms.includes(room.id);
+  const ceiling=room&&state.pressureRooms.includes(room.id)?(state.pressureHeights[room.id]??1.6):2.8;
+  const low=ceiling<1.85;
   if(low)speed=Math.min(speed,1.6);
   speed=Math.max(1.3,speed*flowFactor(state,boss,direction,room?.id??-1,world.rooms));
   // Environment announcements deliberately slow the leader below the ordinary movement floor.

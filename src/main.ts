@@ -13,14 +13,20 @@ const version=__BUILD_COMMIT__;
 const defaults:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1};
 let settings={...defaults};try{const saved=JSON.parse(localStorage.getItem('leadership-settings')??'null');if(saved&&typeof saved==='object')settings={...defaults,...saved};}catch{/* A blocked/corrupt preference store must not prevent local gameplay. */}
 let world=generateWorld(618),state=createGame(world),query=makeWorldQuery(world),page:Page='home';
-let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home';
+let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home',lastPausedAt=-Infinity;
 let scene:OfficeScene,input:GameInput,ui:{render:(m:UIModel)=>void;destroy:()=>void};
 const host=document.querySelector<HTMLElement>('#scene')!,uiRoot=document.querySelector<HTMLElement>('#ui')!;
 const metrics=new FrameMetrics();let accumulator=0,last=performance.now(),uiAccumulator=0,loadingToken=0;
 const params=new URLSearchParams(location.search),preview=params.get('preview');
 function freshSeed(){return crypto.getRandomValues(new Uint32Array(1))[0];}
 function show(){ui?.render(bindUI(state,world,{page,version,tutorialPage,settings,loadingStage,error,phone,preview:!!preview}));}
-function pause(reason?:string){if(page!=='playing')return;if(reason){state.message=reason;state.messageUntil=state.elapsed+8;}page='paused';phone=false;input.setEnabled(false);accumulator=0;show();}
+function pause(reason?:string){if(page!=='playing')return;if(reason){state.message=reason;state.messageUntil=state.elapsed+8;}page='paused';lastPausedAt=performance.now();phone=false;input.setEnabled(false);accumulator=0;show();}
+function resumeFromKeyboard(key:'Escape'|'Enter'){
+ if(page!=='paused')return false;
+ // Native lock-loss can arrive before the key event for the same Escape press.
+ if(key==='Enter'||performance.now()-lastPausedAt>150)begin();
+ return true;
+}
 function begin(){page='playing';phone=false;input.yaw=state.player.yaw;input.setEnabled(true);void input.lock();last=performance.now();accumulator=0;show();}
 function home(){loadingToken++;page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);show();}
 async function loadGame(seed:number){
@@ -64,7 +70,7 @@ function technicalShell(root:HTMLElement,onCommand:(c:UICommand)=>void){
 }
 async function boot(){
  try{
-  scene=new OfficeScene(host,settings);scene.load(world);input=new GameInput(scene.canvas,settings,pause,()=>{phone=!phone;input.setPhoneOpen(phone);show();});input.yaw=state.player.yaw;
+  scene=new OfficeScene(host,settings);scene.load(world);input=new GameInput(scene.canvas,settings,pause,()=>{phone=!phone;input.setPhoneOpen(phone);show();},resumeFromKeyboard);input.yaw=state.player.yaw;
   const modules=import.meta.glob('./ui/views.ts');const importer=modules['./ui/views.ts'];if(importer){const actual=await importer() as {createUI:typeof technicalShell};ui=actual.createUI(uiRoot,command);}else ui=technicalShell(uiRoot,command);
   show();
   if(preview==='ui'){page='home';show();}

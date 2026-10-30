@@ -18,7 +18,7 @@ export function createGame(world:WorldDef):GameState {
     props:world.props.map(prop=>({...prop,held:false,large:false,scale:1,y:0})),
     colleagues:world.colleagues.map(colleague=>({...colleague,grudge:false,seenFor:0,reportAt:null,reportPosition:null,cooldown:0})),
     rules:[],lights:Object.fromEntries(world.rooms.map(room=>[room.id,room.lit||room.permanentLight])),switchCooldown:{},
-    deskHeights:Object.fromEntries(world.desks.map(desk=>[desk.id,.75])),transparentWalls:[],pressureRooms:[],flowRooms:[],interaction:null,
+    deskHeights:Object.fromEntries(world.desks.map(desk=>[desk.id,.75])),transparentWalls:[],pressureRooms:[],pressureHeights:{},flowRooms:[],interaction:null,
     message:'18:00了。按E起身，找到打卡机，再从任意出口下班。',messageUntil:8,
     bubble:'规矩立住，下班不烧心。',bubbleUntil:5,nextBubbleAt:35,
     history:['常驻守则：下班先打卡；暗室不能抓人；领导每次指令提前3秒预警。'],catches:0,roomId:home?.roomId??world.rooms[0]?.id??0,dark:false,aiming:false,aimTarget:'',dragPath:[],dragProgress:0,eventLog:[],
@@ -33,8 +33,10 @@ const complaints=['只要我还在动，就不算原地加班。','领导说得�
 /** Called only while the application is playing. Pausing stops this clock and every rule together. */
 export function stepGame(state:GameState,input:InputFrame,dt:number,world:WorldDef,query:WorldQuery):void {
   if(state.ending||!Number.isFinite(dt)||dt<=0)return;
-  // The app supplies fixed steps. A stalled tab must not run minutes of catch-up in one call.
-  dt=Math.min(dt,.1);
+  const timeLeft=Math.max(0,600-state.elapsed);
+  if(timeLeft===0){state.elapsed=600;state.remaining=0;state.ending='overtime';logEvent(state,'ending:overtime');return;}
+  // Bound both stalled-tab catch-up and the final partial frame to playable time.
+  dt=Math.min(dt,.1,timeLeft);
   state.elapsed=Math.min(600,state.elapsed+dt);state.remaining=Math.max(0,600-state.elapsed);
   for(const id of Object.keys(state.switchCooldown))state.switchCooldown[Number(id)]=Math.max(0,state.switchCooldown[Number(id)]-dt);
   if(state.elapsed>=state.messageUntil)state.message='';

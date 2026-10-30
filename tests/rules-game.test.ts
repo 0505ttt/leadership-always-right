@@ -44,6 +44,23 @@ describe('single-match objectives and clock',()=>{
     run(state,world,query,.1,{interact:true,moveX:1});expect(state.clocked).toBe(false);expect(state.interaction?.progress).toBe(0);
     run(state,world,query,.1);state.player.x=10;state.player.z=9.2;run(state,world,query,1.51,{interact:true});expect(state.clocked).toBe(true);
   });
+  it('limits the last movement step to the actual time remaining at an opened exit',()=>{
+    for(const [remaining,gap,ending] of [[.001,.04,'overtime'],[.02,.04,'escaped'],[.001,.002,'escaped']] as const) {
+      const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+      state.clocked=true;state.openedExits.push('exit');state.elapsed=600-remaining;state.remaining=remaining;
+      state.player.x=49.75-gap;state.player.z=25;const start=state.player.x;
+      stepGame(state,{...idle,moveZ:1,yaw:Math.PI/2},1/60,world,query);
+      expect(state.player.x-start).toBeCloseTo(3.1*Math.min(remaining,1/60),6);expect(state.ending).toBe(ending);
+    }
+  });
+  it('ends an already expired match before accepting movement or object input',()=>{
+    const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    state.elapsed=600;state.remaining=0;state.player.x=25;state.player.z=25;
+    const box=state.props.find(prop=>prop.kind==='box')!;box.held=true;state.player.holding=box.id;
+    stepGame(state,{...idle,moveZ:1,throwPressed:true},1/60,world,query);
+    expect(state.ending).toBe('overtime');expect(state.player.z).toBe(25);expect(state.player.holding).toBe(box.id);
+    expect(runtimeFor(state).propFlights.size).toBe(0);
+  });
   it('stops at exactly 600 seconds and freezes an already chosen outcome',()=>{
     const {state,world,query}=fixture();state.elapsed=599.96;state.remaining=.04;
     run(state,world,query,.1);expect(state.ending).toBe('overtime');expect(state.elapsed).toBe(600);
@@ -235,6 +252,21 @@ describe('environment and locomotion safety',()=>{
       expect(box.y).toBe(0);expect(Math.hypot(box.x-actor.x,box.z-actor.z)).toBeGreaterThan(.7);
       expect(runtimeFor(state).propFlights.has(box.id)).toBe(false);
     }
+  });
+  it('lands a thrown box beside a wall after the player sprints into its reserved landing point',()=>{
+    const world=generateWorld(618),query=makeWorldQuery(world),state=createGame(world);stand(state);
+    Object.assign(state.player,{x:2,z:33.1,yaw:0});const box=state.props.find(prop=>prop.kind==='box')!;
+    box.held=true;state.player.holding=box.id;handleObjectInput(state,{...idle,throwPressed:true},world,query);
+    const destination={...runtimeFor(state).propFlights.get(box.id)!.to};expect(destination.x).toBe(2);expect(destination.z).toBeCloseTo(35.3);
+    for(let frame=0;frame<34;frame++)stepGame(state,{...idle,moveZ:1,sprint:true},1/60,world,query);
+    run(state,world,query,2);
+    expect(box.y).toBe(0);expect(runtimeFor(state).propFlights.has(box.id)).toBe(false);
+    expect(Math.hypot(box.x-destination.x,box.z-destination.z)).toBeLessThanOrEqual(1.6);
+    expect(Math.hypot(box.x-state.player.x,box.z-state.player.z)).toBeGreaterThan(.7);
+    box.held=true;expect(query.validPlacement(box,Math.SQRT2*.275,state)).toBe(true);
+    expect(query.lineOfSight(destination,box,.6,state)).toBe(true);box.held=false;
+    stepGame(state,{...idle,yaw:Math.atan2(box.x-state.player.x,box.z-state.player.z),interact:true,interactPressed:true},1/60,world,query);
+    expect(state.player.holding).toBe(box.id);
   });
   it('lowers a restoring desk beneath a player standing on its top instead of lifting it through them',()=>{
     const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);

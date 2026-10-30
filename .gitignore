@@ -3,6 +3,7 @@ dist/
 .DS_Store
 .env*
 .local/
+.tools/
 .codegraph/
 .tripo/
 assets/source/

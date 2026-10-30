@@ -4,12 +4,18 @@ export class GameInput {
  yaw=0; pitch=-.08;
  private keys=new Set<string>();private pressed=new Set<string>();private mouse=new Set<number>();private shots=false;private disposers:(()=>void)[]=[];
  enabled=false; private phoneOpen=false;
- constructor(private canvas:HTMLCanvasElement,private settings:Settings,private onPause:(reason?:string)=>void,private onPhone:()=>void){
+ constructor(private canvas:HTMLCanvasElement,private settings:Settings,private onPause:(reason?:string)=>void,private onPhone:()=>void,private onResume?:(key:'Escape'|'Enter')=>boolean){
   const listen=(target:EventTarget,type:string,listener:EventListener)=>{target.addEventListener(type,listener);this.disposers.push(()=>target.removeEventListener(type,listener));};
   listen(window,'keydown',((e:KeyboardEvent)=>{
-   if(!this.enabled)return;
+   if(e.code==='Escape'){if(!e.repeat){if(this.enabled)this.onPause();else this.onResume?.('Escape');}return;}
+   if(!this.enabled){
+    const target=e.target as Element|null;
+    const interactive=typeof target?.closest==='function'&&target.closest('button,a,input,select,textarea,[contenteditable],[role="button"]');
+    if(e.code==='Enter'&&!e.repeat&&!interactive&&this.onResume?.('Enter'))e.preventDefault();
+    return;
+   }
    if(['Space','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ControlLeft','ControlRight'].includes(e.code))e.preventDefault();
-   if(e.code==='Escape'){this.onPause();return;}if(e.code==='Tab'&&!e.repeat){this.onPhone();return;}if(this.phoneOpen)return;
+   if(e.code==='Tab'&&!e.repeat){this.onPhone();return;}if(this.phoneOpen)return;
    if(!this.keys.has(e.code))this.pressed.add(e.code);this.keys.add(e.code);
   }) as EventListener);
   listen(window,'keyup',((e:KeyboardEvent)=>{this.keys.delete(e.code);}) as EventListener);
@@ -22,7 +28,7 @@ export class GameInput {
   listen(document,'visibilitychange',(()=>{if(document.hidden){this.clear();if(this.enabled)this.onPause();}}) as EventListener);
  }
  updateSettings(settings:Settings){this.settings=settings;}
- async lock(){try{await this.canvas.requestPointerLock();if(document.pointerLockElement!==this.canvas)throw new Error('pointer lock unavailable');return true;}catch{this.onPause('鼠标未能锁定。请点击继续，再点游戏画面；浏览器需允许鼠标控制。');return false;}}
+ async lock(){try{await this.canvas.requestPointerLock();if(!this.enabled||this.phoneOpen){if(document.pointerLockElement===this.canvas)document.exitPointerLock();return false;}if(document.pointerLockElement!==this.canvas)throw new Error('pointer lock unavailable');return true;}catch{if(this.enabled&&!this.phoneOpen)this.onPause('鼠标未能锁定。请按 Enter 或点击继续；浏览器需允许鼠标控制。');return false;}}
  setPhoneOpen(open:boolean){this.phoneOpen=open;this.clear();if(open){if(document.pointerLockElement===this.canvas)document.exitPointerLock();}else if(this.enabled)void this.lock();}
  setEnabled(enabled:boolean){this.enabled=enabled;if(!enabled){this.phoneOpen=false;this.clear();if(document.pointerLockElement===this.canvas)document.exitPointerLock();}}
  clear(){this.keys.clear();this.pressed.clear();this.mouse.clear();this.shots=false;}
