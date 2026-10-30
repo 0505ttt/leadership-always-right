@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "source": "Tripo API, earlier Codex candidate retained for Kimi to adopt, adjust or replace; no approved art direction",
+  "assets": {
+    "employee-base-v1": {
+      "url": "assets/tripo/employee-base-v1.glb",
+      "bytes": 1198916,
+      "triangles": 6963,
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "skinJoints": 65,
+      "rawHeight": 1.00000057,
+      "targetHeight": 1.75,
+      "up": "+Y",
+      "forward": "+X",
+      "rotationYRadians": -1.5707963267948966,
+      "origin": "feet center",
+      "clips": [
+        "idle",
+        "walk",
+        "run"
+      ],
+      "clipDurations": {
+        "idle": 15.375,
+        "walk": 2.3333333333333335,
+        "run": 1.25
+      },
+      "anchors": {
+        "Head": "mixamorig:Head",
+        "Hips": "mixamorig:Hips",
+        "Spine2": "mixamorig:Spine2",
+        "RightHand": "mixamorig:RightHand",
+        "LeftHand": "mixamorig:LeftHand",
+        "RightUpLeg": "mixamorig:RightUpLeg",
+        "LeftUpLeg": "mixamorig:LeftUpLeg",
+        "RightLeg": "mixamorig:RightLeg",
+        "LeftLeg": "mixamorig:LeftLeg",
+        "RightArm": "mixamorig:RightArm",
+        "LeftArm": "mixamorig:LeftArm",
+        "RightForeArm": "mixamorig:RightForeArm",
+        "LeftForeArm": "mixamorig:LeftForeArm"
+      },
+      "taskIds": [
+        "9d6b2e38-9421-49fb-ad89-7d1784589da1",
+        "6f66c8af-76d2-4e07-b7e4-da4d603d98a7",
+        "be963dd2-c960-4525-833c-93ea2126cc02",
+        "993c48eb-d7e5-44a5-b5d8-7f9cfed2ac45",
+        "91356210-b394-4a55-97d6-40f972adfc93"
+      ],
+      "credits": 95,
+      "integrationStatus": "retained candidate; awaiting Kimi selection; not integrated into the game"
+    }
+  }
+}

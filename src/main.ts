@@ -27,9 +27,9 @@ async function loadGame(seed:number){
  const token=++loadingToken;page='loading';input.setEnabled(false);loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
  try{
   let accepted=false;
-  for(let attempt=0;attempt<20;attempt++){world=generateWorld((seed+attempt)>>>0);state=createGame(world);const result=validateWorld(world,state);if(result.valid){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`));accepted=true;break;}}
-  if(!accepted){world=generateWorld(618);state=createGame(world);if(!validateWorld(world,state).valid)throw new Error('办公室校验失败，备用种子也未通过。');}
-  if(token!==loadingToken)return;query=makeWorldQuery(world);loadingStage='准备角色、物件、灯光和规则效果';show();await new Promise(resolve=>requestAnimationFrame(resolve));
+  for(let attempt=0;attempt<20;attempt++){world=generateWorld((seed+attempt)>>>0);state=createGame(world);query=makeWorldQuery(world);const result=validateWorld(world,state,query);if(result.valid){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`));accepted=true;break;}}
+  if(!accepted){world=generateWorld(618);state=createGame(world);query=makeWorldQuery(world);if(!validateWorld(world,state,query).valid)throw new Error('办公室校验失败，备用种子也未通过。');}
+  if(token!==loadingToken)return;loadingStage='准备角色、物件、灯光和规则效果';show();await new Promise(resolve=>requestAnimationFrame(resolve));
   scene.load(world);scene.render(state,state.player.yaw,input.pitch,'ready',1/60);await scene.prepare();if(token!==loadingToken)return;
   loadingStage='本局资源与场景已准备完成';page='ready';accumulator=0;show();
  }catch(e){if(token!==loadingToken)return;error=e instanceof Error?e.message:String(e);page='error';show();}
@@ -68,7 +68,7 @@ async function boot(){
   const modules=import.meta.glob('./ui/views.ts');const importer=modules['./ui/views.ts'];if(importer){const actual=await importer() as {createUI:typeof technicalShell};ui=actual.createUI(uiRoot,command);}else ui=technicalShell(uiRoot,command);
   show();
   if(preview==='ui'){page='home';show();}
-  if(preview==='character'||preview==='scene'){page='ready';loadingStage='展示样例 · 正式角色/场景组件';show();}
+  if(preview==='character'||preview==='scene'){page='ready';loadingStage='程序占位预览 · 待接入Kimi正式表现组件';show();}
   requestAnimationFrame(frame);
  }catch(e){host.textContent='';uiRoot.style.pointerEvents='auto';const message=document.createElement('p');message.textContent=`无法启动3D画面：${e instanceof Error?e.message:String(e)}。请使用支持WebGL2的桌面浏览器并启用硬件加速。`;uiRoot.append(message);}
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ActiveRule, GameState, InputFrame, WorldDef, WorldQuery } from '../src/contracts/game';
 import { createGame, stepGame } from '../src/rules/game';
 import { runtimeFor } from '../src/rules/runtime';
+import { dropHeld, handleObjectInput, updateObjects } from '../src/rules/objects';
 import { generateWorld } from '../src/world/generate';
 import { makeWorldQuery } from '../src/world/query';
 
@@ -115,6 +116,55 @@ describe('pot conservation and delayed reports',()=>{
     const potId=state.player.potId;stepGame(state,{...idle,throwPressed:true,yaw:Math.PI},1/60,world,query);expect(state.player.potId).toBe(potId);
     run(state,world,query,1.5,{yaw:Math.PI});expect(state.pots.find(p=>p.id===potId)?.phase).toBe('attached');expect(state.player.potId).toBe(potId);expect(new Set(state.pots.map(p=>p.owner)).size).toBe(2);
   });
+  it('keeps a rear contact donor from receiving a forward throw with real collision queries',()=>{
+    // Browser repro used seed 639334048; preserve its relative positions independently of map generation.
+    const {world}=fixture();Object.assign(world.colleagues[0],{x:17,z:21.4});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    Object.assign(state.player,{x:16.864,z:20.95,yaw:Math.PI});
+    const donor=state.colleagues[0];
+    expect(donor).toBeDefined();updateObjects(state,.01,world,query);updateObjects(state,.25,world,query);
+    const pot=state.pots.find(item=>item.owner==='player')!;expect(pot).toBeDefined();
+    handleObjectInput(state,{...idle,potPressed:true},world,query);updateObjects(state,.3,world,query);
+    expect(pot.phase).toBe('held');state.aiming=true;updateObjects(state,.5,world,query);
+    expect(pot.owner).toBe('player');expect(state.aimTarget).toContain('没有目标');
+    handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
+    for(let frame=0;frame<90;frame++) {
+      updateObjects(state,1/60,world,query);expect(pot.owner).toBe('player');expect(state.ending).toBeNull();
+    }
+    expect(pot.phase).toBe('attached');expect(donor.grudge).toBe(false);
+    expect(state.pots).toHaveLength(2);expect(new Set(state.pots.map(item=>item.owner)).size).toBe(2);
+  });
+  it('hits a close forward colleague without shifting the release past them',()=>{
+    for(const separation of [.2,.47,5.95]) {
+      const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+      const pot=state.pots[0];Object.assign(pot,{owner:'player',phase:'held'});
+      state.player.x=26;state.player.z=17;state.player.yaw=0;
+      state.colleagues[2].x=26;state.colleagues[2].z=17+separation;
+      handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
+      for(let frame=0;frame<31&&pot.phase==='flying';frame++)updateObjects(state,1/60,world,query);
+      expect(pot.owner).toBe(state.colleagues[2].id);expect(state.colleagues[2].grudge).toBe(true);
+    }
+  });
+  it('does not hit a leader behind the release or an actor beyond the six-metre range',()=>{
+    for(const separation of [-.47,6.2]) {
+      const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+      const pot=state.pots[0];Object.assign(pot,{owner:'player',phase:'held'});
+      state.player.x=10;state.player.z=15;state.player.yaw=0;state.boss.x=10;state.boss.z=15+separation;
+      state.aiming=true;updateObjects(state,0,world,query);expect(state.aimTarget).toContain('没有目标');
+      handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
+      for(let frame=0;frame<70;frame++)updateObjects(state,1/60,world,query);
+      expect(state.ending).toBeNull();expect(pot.owner).toBe('player');expect(pot.phase).toBe('attached');
+    }
+  });
+  it('checks a nearby target behind a real wall before accepting the enlarged contact radius',()=>{
+    const {world}=fixture();world.walls.push({id:'pot-wall',x:26,z:18.2,w:3,d:.2,height:2.8,roomId:0});
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    const pot=state.pots[0];Object.assign(pot,{owner:'player',phase:'held'});
+    state.player.x=26;state.player.z=17;state.player.yaw=0;state.colleagues[2].x=26;state.colleagues[2].z=18.65;
+    handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
+    for(let frame=0;frame<70;frame++)updateObjects(state,1/60,world,query);
+    expect(pot.owner).toBe('player');expect(pot.phase).toBe('attached');expect(state.colleagues[2].grudge).toBe(false);
+  });
   it('makes a fired ending only when the flying pot actually intersects the leader',()=>{
     const {state,world,query}=fixture();stand(state);state.player.x=20;state.player.z=19.3;run(state,world,query,.3);
     stepGame(state,{...idle,potPressed:true},1/60,world,query);run(state,world,query,.31);
@@ -150,15 +200,54 @@ describe('environment and locomotion safety',()=>{
   it('pulls a player off a box through a legal elevated segment instead of granting permanent immunity',()=>{
     const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
     state.player.x=30;state.player.z=25;state.player.y=.55;
-    state.boss.x=30;state.boss.z=24.25;state.boss.yaw=0;
+    state.boss.x=30;state.boss.z=21;state.boss.yaw=0;
     world.patrol=[{...state.boss}];runtimeFor(state).orderActive=true;state.boss.mode='chase';
-    for(let frame=0;frame<40&&state.player.pose!=='dragged';frame++)stepGame(state,idle,.02,world,query);
+    for(let frame=0;frame<120&&state.player.pose!=='dragged';frame++)stepGame(state,idle,.02,world,query);
     expect(state.player.pose).toBe('dragged');expect(state.player.y).toBe(.55);
     for(let frame=0;frame<190&&state.player.pose==='dragged';frame++) {
       stepGame(state,idle,.02,world,query);
       expect(state.player.y).toBeGreaterThanOrEqual(query.supportHeight(state.player,state)-1e-6);
     }
     expect(state.player.sticky).toBe(true);expect(state.player.y).toBe(0);
+  });
+  it('finishes searching a box-top last-seen position after reaching its legal ground edge',()=>{
+    const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    state.player.x=4;state.player.z=40;state.boss.x=30;state.boss.z=21;
+    state.boss.mode='search';state.boss.lastSeen={x:30,z:25};query.lineOfSight=()=>false;
+    run(state,world,query,10);
+    expect(state.eventLog.some(event=>event.event==='boss:search-ended')).toBe(true);expect(state.boss.lastSeen).toBeNull();
+  });
+  it('places held boxes beside actors and leaves the leader able to walk',()=>{
+    const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    const box=state.props.find(prop=>prop.kind==='box')!;box.held=true;state.player.holding=box.id;
+    state.player.x=30;state.player.z=24.1;state.boss.x=30;state.boss.z=25;world.patrol=[{x:30,z:21}];
+    expect(dropHeld(state,world,query)).toBe(true);expect(Math.hypot(box.x-state.boss.x,box.z-state.boss.z)).toBeGreaterThan(.7);
+    state.player.x=10;state.player.z=40;run(state,world,query,2);expect(state.boss.z).toBeLessThan(24);
+  });
+  it('rechecks throw landings when any actor has walked into the reserved point',()=>{
+    for(const actorId of ['player','boss','colleague']) {
+      const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+      const box=state.props.find(prop=>prop.kind==='box')!;box.held=true;state.player.holding=box.id;state.player.x=30;state.player.z=19;
+      handleObjectInput(state,{...idle,throwPressed:true},world,query);
+      const flight=runtimeFor(state).propFlights.get(box.id)!;expect(flight).toBeDefined();
+      const actor=actorId==='player'?state.player:actorId==='boss'?state.boss:state.colleagues[0];Object.assign(actor,flight.to);
+      updateObjects(state,.55,world,query);
+      expect(box.y).toBe(0);expect(Math.hypot(box.x-actor.x,box.z-actor.z)).toBeGreaterThan(.7);
+      expect(runtimeFor(state).propFlights.has(box.id)).toBe(false);
+    }
+  });
+  it('lowers a restoring desk beneath a player standing on its top instead of lifting it through them',()=>{
+    const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    const desk=world.desks[0];state.deskHeights[desk.id]=1.9;state.player.x=desk.x;state.player.z=desk.z;state.player.y=1.981;
+    const restoring={...rule('desk',desk.id),phase:'restoring' as const};state.rules.push(restoring);
+    stepGame(state,idle,.05,world,query);expect(state.deskHeights[desk.id]).toBeLessThan(1.9);expect(state.player.y).toBeLessThanOrEqual(1.981);
+    run(state,world,query,1.5);expect(state.deskHeights[desk.id]).toBeCloseTo(.75);expect(state.player.y).toBeCloseTo(.831,3);
+  });
+  it('throttles failed ground and edge route searches instead of retrying them every physics frame',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=10;state.player.z=15;
+    state.boss.x=10;state.boss.z=10;state.boss.yaw=0;state.boss.mode='chase';runtimeFor(state).orderActive=true;
+    let attempts=0;query.path=()=>{attempts++;return[];};
+    run(state,world,query,1);expect(attempts).toBeGreaterThanOrEqual(25);expect(attempts).toBeLessThanOrEqual(50);
   });
   it('maps camera-right D to screen right at both opposite headings',()=>{
     for(const [yaw,expectedSign] of [[0,-1],[Math.PI,1]]) {

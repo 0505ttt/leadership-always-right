@@ -35,13 +35,29 @@ export function requestReturnWarning(state:GameState):void {
 
 function moveBoss(state:GameState,target:Vec2,speed:number,dt:number,world:WorldDef,query:WorldQuery):boolean {
   const boss=state.boss,runtime=runtimeFor(state);
-  if(!runtime.navTarget||distance(runtime.navTarget,target)>.65||state.elapsed>=runtime.nextPathAt||!boss.path.length) {
+  if(!runtime.navTarget||distance(runtime.navTarget,target)>.65||state.elapsed>=runtime.nextPathAt) {
     boss.path=query.path(boss,target,state).map(copyPoint);
+    if(!boss.path.length) {
+      // An observed position may be on top of an object. Approach its edge on
+      // the ground; do not feed the player's later hidden position into navigation.
+      const towardBoss=Math.atan2(boss.x-target.x,boss.z-target.z);
+      approach: for(const radius of [.8,1,1.05])for(const offset of [0,1,-1,2,-2,3,-3,4]) {
+        const angle=towardBoss+offset*Math.PI/4;
+        const edge={x:target.x+Math.sin(angle)*radius,z:target.z+Math.cos(angle)*radius};
+        const path=query.path(boss,edge,state);
+        if(path.length){boss.path=path.map(copyPoint);break approach;}
+      }
+    }
+    runtime.navEndpoint=boss.path.length?copyPoint(boss.path[boss.path.length-1]):null;
     runtime.navTarget=copyPoint(target);runtime.nextPathAt=state.elapsed+.65;
   }
   while(boss.path.length&&distance(boss,boss.path[0])<.25)boss.path.shift();
   const point=boss.path[0];
-  if(!point)return distance(boss,target)<.7;
+  if(!point){
+    const arrived=distance(boss,runtime.navEndpoint??target)<.7;
+    if(!arrived)runtime.stuckFor+=dt;
+    return arrived;
+  }
   const dx=point.x-boss.x,dz=point.z-boss.z,length=Math.hypot(dx,dz);
   if(length<.001)return true;
   const direction={x:dx/length,z:dz/length};
@@ -57,7 +73,7 @@ function moveBoss(state:GameState,target:Vec2,speed:number,dt:number,world:World
   boss.x=moved.x;boss.z=moved.z;
   if(distance(before,boss)<.0005)runtime.stuckFor+=dt;else runtime.stuckFor=0;
   if(runtime.stuckFor>.5){runtime.nextPathAt=0;boss.path=[];}
-  return distance(boss,target)<.65;
+  return distance(boss,runtime.navEndpoint??target)<.65;
 }
 
 const playerHeightForDrag=(state:GameState)=>state.player.sticky?1.42:1.75;

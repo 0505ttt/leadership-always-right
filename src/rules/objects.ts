@@ -38,13 +38,18 @@ function pointSegmentDistance(point: Vec2, a: Vec2, b: Vec2): number {
   return Math.hypot(point.x - (a.x + dx * t), point.z - (a.z + dz * t));
 }
 
+function forwardProjection(point:Vec2,from:Vec2,to:Vec2):number {
+  const dx=to.x-from.x,dz=to.z-from.z;
+  return ((point.x-from.x)*dx+(point.z-from.z)*dz)/(Math.hypot(dx,dz)||1);
+}
+
 function aimActor(state: GameState, query: WorldQuery): {id: string;name: string;point: Vec2} | null {
   const from = state.player, direction = forward(from.yaw);
   const to = { x: from.x + direction.x * 6, z: from.z + direction.z * 6 };
   const candidates = [{id: 'boss', name: '领导', point: state.boss}, ...state.colleagues.map(c => ({id:c.id,name:c.name,point:c}))];
   candidates.sort((a,b) => distance(from,a.point) - distance(from,b.point));
   return candidates.find(candidate => {
-    const ahead = (candidate.point.x - from.x) * direction.x + (candidate.point.z - from.z) * direction.z;
+    const ahead = forwardProjection(candidate.point,from,to);
     return ahead > 0.1 && ahead <= 6 && pointSegmentDistance(candidate.point, from, to) < 0.58
       && query.lineOfSight(from, candidate.point, 1.15, state);
   }) ?? null;
@@ -61,7 +66,15 @@ export function updateAim(state: GameState, query: WorldQuery): void {
   else state.aimTarget = state.player.potInHand ? '没有目标 · 投空后锅会回到你身上' : '投掷方向 · 最远6米';
 }
 
-export function legalDrop(state: GameState, world: WorldDef, query: WorldQuery, origin = state.player): Vec2 | null {
+const propRadius = (prop:PropState):number => Math.SQRT2*(prop.kind==='box'?.275:.3*prop.scale);
+
+function clearOfActors(state:GameState,point:Vec2,radius:number):boolean {
+  return [state.player,state.boss,...state.colleagues].every(actor=>distance(actor,point)>radius+.32);
+}
+
+export function legalDrop(state: GameState, world: WorldDef, query: WorldQuery, origin:Vec2 = state.player, item?:PropState): Vec2 | null {
+  const prop=item??state.props.find(candidate=>candidate.id===state.player.holding);
+  const radius=prop?propRadius(prop):.35;
   const home = world.desks.find(desk => desk.home)?.seat ?? world.spawn;
   const direction = forward(state.player.yaw);
   const right = {x:direction.z,z:-direction.x};
@@ -71,7 +84,7 @@ export function legalDrop(state: GameState, world: WorldDef, query: WorldQuery, 
       if (distance(candidate, home) < 1.45) continue;
       if (world.doors.some(door => distance(candidate, door) < 1.3)) continue;
       if (world.exits.some(exit => distance(candidate, exit) < 1.6)) continue;
-      if (query.validPlacement(candidate, 0.35, state) && query.lineOfSight(origin,candidate,0.6,state)) return candidate;
+      if (clearOfActors(state,candidate,radius) && query.validPlacement(candidate, radius, state) && query.lineOfSight(origin,candidate,0.6,state)) return candidate;
     }
   }
   return null;
@@ -132,7 +145,7 @@ export function handleObjectInput(state: GameState, input: InputFrame, world: Wo
       const candidate = {x:from.x + direction.x * length,z:from.z + direction.z * length};
       const home = world.desks.find(desk => desk.home)?.seat ?? world.spawn;
       if (distance(candidate,home)<1.4 || world.doors.some(d=>distance(candidate,d)<1.3) || world.exits.some(e=>distance(candidate,e)<1.6)) continue;
-      if (query.lineOfSight(from,candidate,1.1,state) && query.validPlacement(candidate,.35,state)) { to=candidate; break; }
+      if (clearOfActors(state,candidate,propRadius(prop)) && query.lineOfSight(from,candidate,1.1,state) && query.validPlacement(candidate,propRadius(prop),state)) { to=candidate; break; }
     }
     if (!to) { announceMessage(state,'前方没有安全落点，物件仍在手里。'); return; }
     if (aimActor(state,query)) explicitAction(state,'throw');
@@ -169,9 +182,16 @@ export function updateObjects(state: GameState, dt: number, world: WorldDef, que
     flight.elapsed += dt;
     const progress=clamp(flight.elapsed/flight.duration,0,1);
     prop.x=lerp(flight.from.x,flight.to.x,progress); prop.z=lerp(flight.from.z,flight.to.z,progress);
-    prop.y=(1-progress)*1.1+Math.sin(progress*Math.PI)*.8;
+    prop.y=Math.max(.16,(1-progress)*1.1+Math.sin(progress*Math.PI)*.8);
     if (progress>=1) {
-      prop.y=0; prop.roomId=query.roomAt(prop)?.id??prop.roomId;
+      // Actors can enter a reserved landing point during the flight. Relocate
+      // only the small prop to a nearby valid rest point before enabling collision.
+      const radius=propRadius(prop);
+      const spot=clearOfActors(state,prop,radius)&&query.validPlacement(prop,radius,state)
+        ?copyPoint(prop):legalDrop(state,world,query,flight.to,prop);
+      if(!spot)continue;
+      if(distance(prop,spot)>.01)logEvent(state,`prop:safe-landing:${prop.id}`);
+      Object.assign(prop,spot);prop.y=0; prop.roomId=query.roomAt(prop)?.id??prop.roomId;
       runtime.propFlights.delete(prop.id);
     }
   }
@@ -196,7 +216,14 @@ export function updateObjects(state: GameState, dt: number, world: WorldDef, que
       const to={x:lerp(pot.from.x,pot.to.x,pot.progress),z:lerp(pot.from.z,pot.to.z,pot.progress)};
       if(!query.lineOfSight(from,to,1.15,state)){startReturn(state,pot,from);continue;}
       const hit=[{id:'boss',point:state.boss},...state.colleagues.map(c=>({id:c.id,point:c}))]
-        .filter(actor=>actor.id!==pot.owner&&pointSegmentDistance(actor.point,from,to)<.58)
+        .filter(actor=>{
+          // Segment-distance clamps to its start: without the release-ray check,
+          // a nearby actor behind the thrower would count as an immediate hit.
+          const ahead=forwardProjection(actor.point,pot.from,pot.to);
+          return actor.id!==pot.owner&&ahead>.1&&ahead<=6
+            &&pointSegmentDistance(actor.point,from,to)<.58
+            &&query.lineOfSight(from,actor.point,1.15,state);
+        })
         .sort((a,b)=>distance(from,a.point)-distance(from,b.point))[0];
       if(hit?.id==='boss') {
         state.ending='fired'; pot.to=copyPoint(state.boss); pot.progress=1;

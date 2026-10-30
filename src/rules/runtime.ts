@@ -26,6 +26,7 @@ export interface Runtime {
   workingDesk: string | null;
   lastInteractHeld: boolean;
   navTarget: Vec2 | null;
+  navEndpoint: Vec2 | null;
   nextPathAt: number;
   stuckFor: number;
   leaveTarget: Vec2 | null;
@@ -64,7 +65,7 @@ export function initRuntime(state: GameState, homeId: string | null): Runtime {
     pendingReturn: false, workCalm: 0, eventSerial: 0, explicitEvent: null,
     observedEvents: new Set(), eventSeenId: '', eventSeenFor: 0,
     interactionId: '', interactionElapsed: 0, interactionLatched: false,
-    workingDesk: homeId, lastInteractHeld: false, navTarget: null,
+    workingDesk: homeId, lastInteractHeld: false, navTarget: null, navEndpoint: null,
     nextPathAt: 0, stuckFor: 0, leaveTarget: null, lightUseFor: 0,
     dragDistance: 0, dragSpeed: 0, dragTravelled: 0, dragElapsed: 0,
     potReturningToHand: new Map(), throwWindup: new Map(),
