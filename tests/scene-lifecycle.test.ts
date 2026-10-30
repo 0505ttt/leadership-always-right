@@ -55,6 +55,17 @@ function observeResources(object: THREE.Object3D) {
 }
 const settle = async (index: number) => { harness.pending[index].resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 
+it('does not render new occupants against an old scene while a replacement is loading', () => {
+ const scene=loadedScene(618),world=generateWorld(42),state=createGame(world);
+ expect(generateWorld(618).colleagues).toHaveLength(4);expect(state.colleagues).toHaveLength(7);
+ expect(()=>scene.render(state,0,0,'loading',1/60)).not.toThrow();
+ expect(harness.render).not.toHaveBeenCalled();
+ scene.clear();expect(()=>scene.render(state,0,0,'loading',1/60)).not.toThrow();
+ expect(harness.render).not.toHaveBeenCalled();
+ scene.load(world);scene.render(state,0,0,'ready',1/60);
+ expect(harness.render).toHaveBeenCalledTimes(1);
+});
+
 it('detaches an old world immediately but keeps its materials and textures alive until compilation settles', async () => {
  const scene = loadedScene(), group = scene.scene.children.find(child => child instanceof THREE.Group)!;
  const resources = observeResources(group), preparation = scene.prepare();

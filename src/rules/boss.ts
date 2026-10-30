@@ -2,6 +2,7 @@ import type { GameState, Vec2, WorldDef, WorldQuery } from '../contracts/game';
 import { announceMessage, copyPoint, distance, flowFactor, forward, logEvent, playerSightHeight, runtimeFor } from './runtime';
 import { litAt } from './player';
 import { dropHeld, settlePotForCapture } from './objects';
+import { switchOperatingPoint } from '../world/query';
 
 export function visible(state:GameState,observer:Vec2&{yaw:number},target:Vec2,range:number,height:number,query:WorldQuery):boolean {
   const length=distance(observer,target);
@@ -176,7 +177,7 @@ function inspectLights(state:GameState,dt:number,world:WorldDef,query:WorldQuery
   const room=query.roomAt(boss);
   if(!room||room.permanentLight||state.lights[room.id]!==false||!['search','chase'].includes(boss.mode)) {runtime.lightUseFor=0;return false;}
   const actual=world.rooms.find(item=>item.id===room.id)!;
-  if(distance(boss,actual.switch)>1.15){moveBoss(state,actual.switch,boss.mode==='chase'?4.1:2,dt,world,query);runtime.lightUseFor=0;return true;}
+  if(distance(boss,actual.switch)>1.15){moveBoss(state,switchOperatingPoint(actual),boss.mode==='chase'?4.1:2,dt,world,query);runtime.lightUseFor=0;return true;}
   if((state.switchCooldown[room.id]??0)>0){runtime.lightUseFor=0;return false;}
   runtime.lightUseFor+=dt;
   if(runtime.lightUseFor>=.25){state.lights[room.id]=true;state.switchCooldown[room.id]=4;runtime.lightUseFor=0;boss.contactFor=0;logEvent(state,`boss:light-on:${room.id}`);}
@@ -207,7 +208,10 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
   } else runtime.eventSeenFor=0;
   if(!evidence&&boss.evidenceUntil!==0&&boss.evidenceUntil<=state.elapsed){
     boss.evidenceUntil=0;boss.evidenceId=null;
-    if(!sees&&boss.mode!=='warning'){clearOrder(state);boss.mode='patrol';}
+    if(!sees&&boss.mode!=='warning'){
+      clearOrder(state);boss.mode=runtime.activeReport?'search':'patrol';
+      if(runtime.activeReport)boss.lastSeen=copyPoint(runtime.activeReport);
+    }
   }
   const returnWarning=state.rules.find(rule=>rule.kind==='return'&&rule.phase==='warning');
   if(returnWarning&&boss.evidenceUntil<=state.elapsed&&(!sees||player.pose==='working')) {
@@ -216,10 +220,10 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
     announceMessage(state,'离岗预警取消 · 他暂时没抓到把柄。',2);logEvent(state,'boss:warning-cancelled');
   }
   if(sees) {
-    boss.lastSeen=copyPoint(player);boss.searchFor=0;
+    runtime.activeReport=null;boss.lastSeen=copyPoint(player);boss.searchFor=0;
     if(player.pose==='working'&&!evidence&&!returnWarning) {
       runtime.workCalm+=dt;boss.seenFor=0;
-      if(runtime.workCalm>=2&&(runtime.orderActive||boss.mode==='search'||boss.mode==='chase')){clearOrder(state);boss.mode='patrol';runtime.reports.shift();logEvent(state,'boss:calmed-by-working');}
+      if(runtime.workCalm>=2&&(runtime.orderActive||boss.mode==='search'||boss.mode==='chase')){clearOrder(state);boss.mode='patrol';logEvent(state,'boss:calmed-by-working');}
     } else {
       runtime.workCalm=0;
       if(!runtime.orderActive&&!returnWarning&&player.protection<=0) {
@@ -252,16 +256,23 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
   }
   if(boss.mode==='search') {
     const arrived=!boss.lastSeen||moveBoss(state,boss.lastSeen,2,dt,world,query);
-    if(arrived){boss.searchFor+=dt;boss.yaw+=dt*.65;}
+    if(arrived){
+      if(runtime.activeReport&&boss.searchFor===0)logEvent(state,'boss:report-arrived');
+      boss.searchFor+=dt;boss.yaw+=dt*.65;
+    }
     if(boss.searchFor>=6||runtime.stuckFor>=7.5) {
       if(boss.evidenceUntil<=state.elapsed)clearOrder(state);
-      boss.mode='patrol';boss.lastSeen=null;runtime.nextPathAt=0;runtime.reports.shift();
+      boss.mode='patrol';boss.lastSeen=null;runtime.nextPathAt=0;runtime.stuckFor=0;runtime.activeReport=null;
       logEvent(state,'boss:search-ended');
     }
     return;
   }
   if(runtime.reports.length) {
-    boss.lastSeen=copyPoint(runtime.reports[0]);boss.mode='search';boss.searchFor=0;runtime.nextPathAt=0;
+    // Pending reports are consumed only when this investigation starts. A
+    // different search ending must not discard a newly arrived report.
+    runtime.activeReport=runtime.reports.shift()!;
+    boss.lastSeen=copyPoint(runtime.activeReport);boss.mode='search';boss.searchFor=0;boss.path=[];
+    runtime.nextPathAt=0;runtime.stuckFor=0;logEvent(state,'boss:report-investigation-started');
     return;
   }
   const target=world.patrol[boss.patrolIndex%Math.max(1,world.patrol.length)];

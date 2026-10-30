@@ -13,6 +13,14 @@ function fixture():{world:WorldDef;query:WorldQuery;state:GameState} {
   const query:WorldQuery={roomAt:point=>Math.hypot(point.x-10,point.z-10)<2||Math.hypot(point.x-49,point.z-25)<2?{...world.rooms[0],permanentLight:true}:world.rooms[0],move:(p,d)=>({x:p.x+d.x,z:p.z+d.z}),lineOfSight:()=>true,path:(_,b)=>[{...b}],validPlacement:()=>true,clearance:()=>Infinity,supportHeight:()=>0};
   return {world,query,state:createGame(world)};
 }
+function reportedJourneyFixture() {
+  const {world}=fixture();world.walls.push({id:'report-detour',x:25,z:25,w:.3,d:40,height:2.8,roomId:0});
+  world.bossSpawn={x:10,z:40};world.patrol=[{x:10,z:40}];
+  const query=makeWorldQuery(world),state=createGame(world),destination={x:40,z:40};
+  state.player.pose='standing';runtimeFor(state).nextEnvironment=Infinity;
+  state.colleagues[0].reportAt=.05;state.colleagues[0].reportPosition={...destination};
+  return {world,query,state,destination};
+}
 function run(state:GameState,world:WorldDef,query:WorldQuery,seconds:number,patch:Partial<InputFrame>={}) {
   const frames=Math.ceil(seconds*60);
   for(let i=0;i<frames;i++)stepGame(state,{...idle,...patch},Math.min(1/60,seconds-i/60),world,query);
@@ -267,6 +275,47 @@ describe('pot conservation and delayed reports',()=>{
     handleObjectInput(state,{...idle,throwPressed:true},world,query);updateObjects(state,.2,world,query);
     for(let frame=0;frame<31&&pot.phase==='flying';frame++)updateObjects(state,1/60,world,query);
     expect(pot.owner).toBe(target.id);expect(target.grudge).toBe(true);
+  });
+  it('keeps a newly delivered report through the end of an older search and investigates its long route before timing out',()=>{
+    const {world,query,state,destination}=reportedJourneyFixture();
+    state.boss.mode='search';state.boss.lastSeen={...world.bossSpawn};state.boss.searchFor=5.9;
+    state.boss.evidenceUntil=8;state.boss.evidenceId='earlier-observation';
+    const route=query.path(state.boss,destination,state);let length=0,point={x:state.boss.x,z:state.boss.z};
+    for(const end of route){length+=Math.hypot(end.x-point.x,end.z-point.z);point=end;}expect(length).toBeGreaterThan(30);
+    let accepted=false;
+    for(let frame=0;frame<2400&&Math.hypot(state.boss.x-destination.x,state.boss.z-destination.z)>.7;frame++) {
+      const before={x:state.boss.x,z:state.boss.z};stepGame(state,idle,1/60,world,query);
+      expect(query.lineOfSight(before,state.boss,1.5,state,'solid')).toBe(true);
+      if(state.boss.lastSeen?.x===destination.x&&state.boss.lastSeen.z===destination.z)accepted=true;
+      if(accepted){expect(state.boss.lastSeen).toEqual(destination);expect(state.boss.searchFor).toBeLessThan(1/60+.001);}
+    }
+    expect(accepted).toBe(true);expect(Math.hypot(state.boss.x-destination.x,state.boss.z-destination.z)).toBeLessThanOrEqual(.7);
+    expect(state.elapsed).toBeGreaterThan(8);expect(state.boss.evidenceUntil).toBe(0);
+    run(state,world,query,5);expect(state.boss.mode).toBe('search');run(state,world,query,1.3);
+    expect(state.boss.mode).toBe('patrol');expect(state.boss.lastSeen).toBeNull();expect(runtimeFor(state).reports).toEqual([]);
+  });
+  it('can acquire a genuinely visible player while travelling to a report and pursue after the normal warning',()=>{
+    const {world,query,state,destination}=reportedJourneyFixture();run(state,world,query,2);
+    expect(state.boss.lastSeen).toEqual(destination);expect(state.boss.mode).toBe('search');
+    Object.assign(state.player,{x:state.boss.x+Math.sin(state.boss.yaw)*3,z:state.boss.z+Math.cos(state.boss.yaw)*3});
+    expect(query.validPlacement(state.player,.3,state)).toBe(true);const observed={x:state.player.x,z:state.player.z};
+    let warned=false;
+    for(let frame=0;frame<360&&state.boss.mode!=='chase';frame++) {
+      stepGame(state,idle,1/60,world,query);warned ||=state.rules.some(rule=>rule.kind==='return'&&rule.phase==='warning');
+    }
+    expect(warned).toBe(true);expect(state.boss.mode).toBe('chase');expect(state.boss.lastSeen).toEqual(observed);
+    expect(state.boss.lastSeen).not.toEqual(destination);
+  });
+  it('gives up an unreachable reported point in bounded time and accepts the next report',()=>{
+    const {world}=fixture();world.width=16;world.depth=16;world.rooms[0]={...world.rooms[0],x:8,z:8,w:16,d:16};
+    world.props=[];world.stations=[];world.exits=[];world.bossSpawn={x:2,z:12};world.patrol=[{x:2,z:12}];
+    world.colleagues.forEach((colleague,index)=>Object.assign(colleague,{x:2+index*2,z:8}));
+    world.walls.push(...[{x:10,z:12,w:.2,d:4},{x:14,z:12,w:.2,d:4},{x:12,z:10,w:4,d:.2},{x:12,z:14,w:4,d:.2}].map((rect,index)=>({...rect,id:`report-block-${index}`,height:2.8,roomId:0})));
+    const query=makeWorldQuery(world),state=createGame(world);runtimeFor(state).nextEnvironment=Infinity;state.player.x=14;state.player.z=4;
+    runtimeFor(state).reports.push({x:12,z:12});run(state,world,query,8);
+    expect(state.boss.mode).toBe('patrol');expect(state.boss.lastSeen).toBeNull();expect(runtimeFor(state).reports).toEqual([]);
+    runtimeFor(state).reports.push({x:2,z:10});run(state,world,query,2);
+    expect(Math.hypot(state.boss.x-2,state.boss.z-10)).toBeLessThan(.7);expect(state.boss.mode).toBe('search');
   });
   it('reports a snapshot ten seconds later, never the new hidden position',()=>{
     const {state,world,query}=fixture();stand(state);const colleague=state.colleagues[2];colleague.grudge=true;state.player.x=colleague.x;state.player.z=colleague.z+3;

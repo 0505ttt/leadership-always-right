@@ -13,6 +13,23 @@ describe('V3 offices',()=>{
 });
 
 describe('tight clearance regressions',()=>{
+ it('mounts every light switch flush to a solid wall, facing a reachable operating position',()=>{
+  for(const seed of [1,2,3,42,618,2026]){
+   const world=generateWorld(seed),state=createGame(world),query=makeWorldQuery(world);
+   for(const room of world.rooms){
+    const control=room.switch,wall=world.walls.find(w=>w.id===control.wallId)!;
+    expect(wall,`seed ${seed}, room ${room.id}`).toBeDefined();expect(wall.crawl||wall.partition).toBeFalsy();
+    const nx=Math.sin(control.yaw??0),nz=Math.cos(control.yaw??0);
+    const back={x:control.x-nx*.08,z:control.z-nz*.08};
+    if(Math.abs(nx)>.5){expect(Math.abs(back.x-wall.x)).toBeCloseTo(wall.w/2);expect(Math.abs(back.z-wall.z)+.065).toBeLessThan(wall.d/2);}
+    else {expect(Math.abs(back.z-wall.z)).toBeCloseTo(wall.d/2);expect(Math.abs(back.x-wall.x)+.065).toBeLessThan(wall.w/2);}
+    const approach={x:control.x+nx*.65,z:control.z+nz*.65};
+    expect(query.roomAt(approach)?.id).toBe(room.id);
+    expect(query.lineOfSight(approach,control,1.12,state,'solid')).toBe(true);
+    expect(query.path(world.spawn,approach,state).length).toBeGreaterThan(0);
+   }
+  }
+ },30_000);
  it('allows an actor touching a wall to enter and leave the navigation graph',()=>{const w=generateWorld(618),s=createGame(w),q=makeWorldQuery(w);for(const x of [.42,.43,.45]){const edge={x,z:10},open={x:3,z:10};expect(q.validPlacement(edge,.3,s)).toBe(true);expect(q.path(edge,open,s).length).toBeGreaterThan(0);expect(q.path(open,edge,s).length).toBeGreaterThan(0);}});
 });
 
@@ -40,7 +57,7 @@ describe('seeded module templates',()=>{
   expect(topology.size).toBe(3);expect(roles.size).toBeGreaterThan(40);expect(stations.size).toBe(3);expect(exitAxes.size).toBe(2);expect(props.size).toBeGreaterThan(40);expect(staff.size).toBeGreaterThan(40);
   console.info('128-seed map audit',JSON.stringify({topologies:topology.size,roomAssignments:roles.size,stationPairs:stations.size,exitAxes:exitAxes.size,propDistributions:props.size,staffDistributions:staff.size,clockMin,exitMin,separationMin}));
  },120_000);
- it('keeps chair paths to every mandatory target while both cakes are enlarged',()=>{
+ it('keeps chair paths to every mandatory target while all cakes are enlarged',()=>{
   for(const seed of [1,2,3,42,618,2026]){
    const world=generateWorld(seed),state=createGame(world),query=makeWorldQuery(world);
    for(const cake of state.props.filter(p=>p.kind==='cake'))cake.scale=3;

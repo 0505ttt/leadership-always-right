@@ -5,7 +5,7 @@ export type RuleKind = 'cake' | 'desk' | 'pot' | 'return' | 'flow' | 'transparen
 export type Pose = 'standing' | 'crouching' | 'working' | 'rolling' | 'dragged';
 export interface Rect { x: number; z: number; w: number; d: number }
 export interface Wall extends Rect { id: string; height: number; roomId: number; transparent?: boolean; partition?: boolean; crawl?: boolean }
-export interface Room extends Rect { id: number; name: string; kind: string; lit: boolean; permanentLight: boolean; switch: Vec2; pressure: boolean }
+export interface Room extends Rect { id: number; name: string; kind: string; lit: boolean; permanentLight: boolean; switch: Vec2 & {wallId?:string;yaw?:number}; pressure: boolean }
 export interface Door extends Vec2 { id: string; a: number; b: number; axis: 'x' | 'z'; width: number; crawl?: boolean }
 export interface Desk extends Vec2 { id: string; roomId: number; seat: Vec2; yaw: number; home?: boolean }
 export interface Station extends Vec2 { id: string; roomId: number; yaw: number }

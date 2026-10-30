@@ -1,6 +1,11 @@
-import type { GameState, Rect, Vec2, WorldDef, WorldQuery } from '../contracts/game';
+import type { GameState, Rect, Room, Vec2, WorldDef, WorldQuery } from '../contracts/game';
 const navigationDirections=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]] as const;
 export const distance=(a:Vec2,b:Vec2)=>Math.hypot(a.x-b.x,a.z-b.z);
+/** Actor destination in front of the control; the wall-mounted control itself is not walkable. */
+export function switchOperatingPoint(room:Room):Vec2 {
+ const {x,z,yaw}=room.switch;
+ return yaw===undefined?{x,z}:{x:x+Math.sin(yaw)*.65,z:z+Math.cos(yaw)*.65};
+}
 export function inside(p:Vec2,r:Rect,pad=0){return Math.abs(p.x-r.x)<r.w/2+pad&&Math.abs(p.z-r.z)<r.d/2+pad;}
 export function circleHitsRect(p:Vec2,r:Rect,radius:number){const dx=Math.max(Math.abs(p.x-r.x)-r.w/2,0),dz=Math.max(Math.abs(p.z-r.z)-r.d/2,0);return dx*dx+dz*dz<radius*radius;}
 export function segmentRect(a:Vec2,b:Vec2,r:Rect,pad=0):boolean {

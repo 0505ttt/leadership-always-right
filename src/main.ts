@@ -33,7 +33,7 @@ function resumeFromKeyboard(key:'Escape'|'Enter'){
 function begin(){page='playing';phone=false;input.yaw=state.player.yaw;input.setEnabled(true);void input.lock();last=performance.now();accumulator=0;show();}
 function home(){loadingToken++;page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);show();}
 async function loadGame(seed:number){
- const token=++loadingToken;page='loading';input.setEnabled(false);loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
+ const token=++loadingToken;page='loading';input.setEnabled(false);scene.clear();loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
  try{
   if(token!==loadingToken)return;
   let accepted=false;
@@ -96,5 +96,5 @@ function frame(now:number){
  requestAnimationFrame(frame);
 }
 // Read-only diagnostics are available for transparent validation. No production teleport/win commands.
-Object.defineProperty(window,'__OFFICE__',{value:{getSnapshot:()=>JSON.parse(JSON.stringify({page,state,world,version})),getPerformance:()=>({...metrics.report(),device:scene?.getMetrics(),userAgent:navigator.userAgent,quality:settings.quality,version}),resetPerformance:()=>metrics.reset()},configurable:false});
+Object.defineProperty(window,'__OFFICE__',{value:{getSnapshot:()=>JSON.parse(JSON.stringify({page,state,world,version,visuals:scene?.getRuleVisuals()})),getPerformance:()=>({...metrics.report(),device:scene?.getMetrics(),userAgent:navigator.userAgent,quality:settings.quality,version}),resetPerformance:()=>metrics.reset()},configurable:false});
 void boot();

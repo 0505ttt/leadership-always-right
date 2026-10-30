@@ -104,7 +104,7 @@ export class OfficeScene {
    }
    const light=new THREE.PointLight(0xffedc7,25,15,2);light.position.set(room.x,2.5,room.z);this.group.add(light);this.lamps.set(room.id,light);
    if(room.pressure){this.sign(this.group,'活动顶板 · 注意净高',room.x,2.52,room.z-room.d/2+.13,2.5,.35);}
-   const sw=this.box(this.group,.13,.28,.16,room.switch.x,1.12,room.switch.z,white);const led=this.box(sw,.3,.16,1,0,0,.55,new THREE.MeshBasicMaterial({color:0x99efaf}));this.switches.set(room.id,led);
+   const sw=this.box(this.group,.13,.28,.16,room.switch.x,1.12,room.switch.z,white);sw.rotation.y=room.switch.yaw??0;const led=this.box(sw,.3,.16,1,0,0,.55,new THREE.MeshBasicMaterial({color:0x99efaf}));this.switches.set(room.id,led);
    const sl=this.sprite('E  灯',room.switch.x,1.65,room.switch.z,.8);this.labels.push({object:sl,point:room.switch,range:5});
    this.sign(this.group,room.name,room.x,2.2,room.z-room.d/2+.14,3.1,.48);
    const flow=new THREE.Group();for(let i=-3;i<=3;i+=1.4){const arrow=this.sign(flow,'↑',room.x,.025,room.z+i,1.1,1.1,0,'#f4d08a','#63583a');arrow.rotation.x=-Math.PI/2;}flow.visible=false;this.group.add(flow);this.flows.set(room.id,flow);
@@ -182,7 +182,7 @@ export class OfficeScene {
  }
  private releaseWhenIdle(release:()=>void){if(this.compiling>0)this.retiredResources.push(release);else release();}
  render(state:GameState,yaw:number,pitch:number,page:Page,dt:number){
-  if(!this.world)return;const world=this.world,time=state.elapsed;
+  if(!this.world||this.world.seed!==state.seed)return;const world=this.world,time=state.elapsed;
   for(const room of world.rooms){const lit=room.permanentLight||state.lights[room.id];this.lamps.get(room.id)!.intensity=lit?25:0;
    const mats=this.roomMaterials.get(room.id)??[];for(const m of mats)m.color.copy(m.userData.baseColor).multiplyScalar(lit?1:.4);
    const led=this.switches.get(room.id);if(led)(led.material as THREE.MeshBasicMaterial).color.set(lit?0x9aefb0:0xc17b45);
@@ -225,6 +225,12 @@ export class OfficeScene {
   const clock=`18:${Math.floor(state.elapsed/60).toString().padStart(2,'0')}`;if(this.clockText&&clock!==this.lastClock){this.lastClock=clock;const mat=this.clockText.material as THREE.SpriteMaterial;const old=mat.map;mat.map=this.text(clock);if(old){old.dispose();this.resources.delete(old);}}
   this.renderer.render(this.scene,this.camera);
  }
+ getRuleVisuals(){return {
+  ceilings:[...this.ceilings].map(([roomId,mesh])=>({roomId,clearance:mesh.position.y-mesh.scale.y/2})),
+  desks:[...this.desks].map(([id,mesh])=>({id,height:mesh.position.y})),
+  partitions:[...this.wallMeshes].filter(([id])=>id.startsWith('partition-')).map(([id,mesh])=>({id,opacity:(mesh.material as THREE.MeshStandardMaterial).opacity})),
+  flows:[...this.flows].filter(([,mesh])=>mesh.visible).map(([roomId])=>roomId),
+ };}
  getMetrics(){const gl=this.renderer.getContext();const ext=gl.getExtension('WEBGL_debug_renderer_info');return {renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),drawingBuffer:{width:gl.drawingBufferWidth,height:gl.drawingBufferHeight},css:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,pixelRatio:this.renderer.getPixelRatio(),drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,programs:this.renderer.info.programs?.length??0,memory:{...this.renderer.info.memory}};}
  clear(){
   const group=this.group,resources=this.resources,instances=this.runtimeInstances,assets=this.runtimeAssets;

@@ -29,6 +29,12 @@ function fixture(seed=123) {
 }
 type Fixture=ReturnType<typeof fixture>;
 
+function allowOnly(f:Fixture,kinds:RuleKind[],random=0) {
+ f.state.elapsed=20;
+ const runtime=runtimeFor(f.state);runtime.nextEnvironment=20;runtime.random=()=>random;
+ for(const kind of ['cake','desk','pot','flow','transparent','pressure'] as const)if(!kinds.includes(kind))runtime.lastKinds[kind]=20;
+}
+
 function advance(f:Fixture,seconds:number) {
  for(let i=0;i<Math.ceil(seconds/.05);i++) {
   const dt=Math.min(.05,seconds-i*.05);f.state.elapsed+=dt;
@@ -268,5 +274,104 @@ describe('announcement priority and spatial budgets',()=>{
   });
   expect(f.state.pots).toHaveLength(2);
   expect(new Set(f.state.pots.map(pot=>pot.owner)).size).toBe(2);
+ });
+});
+
+describe('environment announcements prefer observable targets without suppressing valid remote commands',()=>{
+ it('opens the first seeded environment window at 15–18 seconds and keeps later windows at 24–36 seconds',()=>{
+  for(const seed of [618,1,7,42,123,999]) {
+   const f=fixture(seed),runtime=runtimeFor(f.state);
+   const initial=createGame(f.world);const first=runtimeFor(initial).nextEnvironment;
+   expect(first).toBeGreaterThanOrEqual(15);expect(first).toBeLessThanOrEqual(18);
+   runtime.nextEnvironment=first;
+   advance(f,14.99);expect(f.state.rules).toHaveLength(0);
+   advance(f,first-14.99+.01);
+   expect(f.state.rules.some(rule=>rule.kind!=='return')).toBe(true);
+   expect(runtime.nextEnvironment-runtime.lastEnvironment).toBeGreaterThanOrEqual(24);
+   expect(runtime.nextEnvironment-runtime.lastEnvironment).toBeLessThanOrEqual(36);
+  }
+ });
+ it('chooses the occupied eligible room instead of a remote pressure plate and names it before lowering',()=>{
+  const world=generateWorld(618),state=createGame(world),query=makeWorldQuery(world),f={world,state,query};
+  const room=world.rooms.find(item=>item.id===2)!;
+  Object.assign(state.player,{x:room.x+3,z:room.z-4,pose:'standing'});
+  Object.assign(state.boss,{x:room.x+3,z:room.z-6});
+  allowOnly(f,['pressure'],.999);updateEnvironment(state,0,world,query);
+  const rule=state.rules[0];expect(rule?.roomId).toBe(room.id);
+  expect(rule.effect).toContain(room.name);expect(rule.effect).toContain('活动顶板');
+  expect(state.history[0]).toContain(room.name);
+  expect(state.pressureRooms).toHaveLength(0);
+  advance(f,2.99);expect(state.pressureRooms).toHaveLength(0);
+  advance(f,.02);advance(f,.5);expect(state.pressureHeights[room.id]).toBeCloseTo(2.2);
+  advance(f,.5);expect(state.pressureHeights[room.id]).toBeCloseTo(1.6);
+  expect(state.pressureRooms).toEqual([room.id]);
+ });
+
+ it('does not infer a hidden player room to choose pressure there',()=>{
+  const f=fixture();Object.assign(f.state.player,{x:30,z:15});
+  f.world.patrol=[{x:10,z:15}];
+  f.world.walls.push({id:'closed-boundary',x:20,z:15,w:.18,d:30,height:2.8,roomId:0});
+  allowOnly(f,['pressure']);updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules).toHaveLength(0);expect(f.state.pressureRooms).toHaveLength(0);
+ });
+
+ it('keeps a known remote pressure room as a fallback and identifies the remote location',()=>{
+  const f=fixture();f.world.doors.push({id:'entry',a:0,b:1,x:20,z:15,axis:'z',width:2.2});
+  f.world.patrol=[{x:30,z:15}];allowOnly(f,['pressure']);
+  updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.roomId).toBe(1);
+  expect(f.state.rules[0]?.effect).toContain('会议室');expect(f.state.rules[0]?.effect).toContain('其他房间');
+  advance(f,4.1);expect(f.state.pressureHeights[1]).toBeCloseTo(1.6);
+  expect(f.query.clearance(f.state.player,f.state)).toBe(Infinity);
+ });
+
+ it('can warn the known adjacent pressure room at a nearby visible doorway',()=>{
+  const f=fixture();Object.assign(f.state.player,{x:18,z:15});
+  f.world.doors.push({id:'entry',a:0,b:1,x:20,z:15,axis:'z',width:2.2});
+  f.world.patrol=[{x:30,z:15}];allowOnly(f,['pressure']);
+  updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.roomId).toBe(1);expect(f.state.rules[0]?.effect).toContain('会议室');
+ });
+
+ it('falls back to a local legal flow rather than announcing an ineffective remote plate',()=>{
+  const f=fixture();f.world.patrol=[{x:10,z:16}];allowOnly(f,['pressure','flow']);
+  updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.kind).toBe('flow');expect(f.state.rules[0]?.roomId).toBe(0);
+  expect(f.state.rules[0]?.effect).toContain('本人工作区');expect(f.state.rules[0]?.effect).toContain('通道');
+ });
+
+ it('selects a visible local partition face without treating its own solid center as an occluder',()=>{
+  const f=fixture();Object.assign(f.state.player,{x:30,z:15});Object.assign(f.state.boss,{x:31,z:15});
+  f.world.walls.unshift({id:'remote-panel',x:5,z:20,w:3,d:.16,height:2.2,roomId:0,partition:true});
+  expect(f.query.lineOfSight(f.state.player,f.world.walls.find(wall=>wall.id==='panel')!,1.05,f.state)).toBe(false);
+  allowOnly(f,['transparent']);updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.targetId).toBe('panel');expect(f.state.rules[0]?.effect).toContain('会议室');
+  advance(f,3.01);expect(f.query.lineOfSight({x:33,z:15},{x:37,z:15},1.05,f.state)).toBe(true);
+ });
+
+ it('retains the fixed known home desk when no observable target is available',()=>{
+  const f=fixture();f.world.walls.push({id:'occluder',x:10,z:8,w:20,d:.18,height:2.8,roomId:0});
+  allowOnly(f,['desk']);updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.targetId).toBe('home');expect(f.state.rules[0]?.effect).toContain('暂不可见');
+  advance(f,3.9);expect(f.state.deskHeights.home).toBeCloseTo(1.9);
+ });
+
+ it('prefers a local command across rule kinds before falling back to a remote fixed desk',()=>{
+  const f=fixture();Object.assign(f.state.player,{x:30,z:15});Object.assign(f.state.boss,{x:31,z:15});
+  f.state.deskHeights.project=1.9;
+  allowOnly(f,['desk','pressure']);updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.kind).toBe('pressure');expect(f.state.rules[0]?.roomId).toBe(1);
+  expect(f.state.rules[0]?.effect).not.toContain('其他房间');
+ });
+
+ it.each([
+  {kind:'cake' as const,object:'愿景饼'},
+  {kind:'desk' as const,object:'我的工位'},
+  {kind:'pot' as const,object:'你'},
+ ])('names the room and actual target in $kind notices',({kind,object})=>{
+  const f=fixture();allowOnly(f,[kind]);updateEnvironment(f.state,0,f.world,f.query);
+  expect(f.state.rules[0]?.kind).toBe(kind);
+  expect(f.state.rules[0]?.effect).toContain('本人工作区');expect(f.state.rules[0]?.effect).toContain(object);
+  if(kind==='pot')expect(f.state.rules[0].effect).toContain('甲');
  });
 });

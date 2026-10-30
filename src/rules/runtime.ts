@@ -39,6 +39,7 @@ export interface Runtime {
   throwWindup: Map<string, number>;
   potReleasePosition: Map<string, Vec2>;
   reports: Vec2[];
+  activeReport: Vec2 | null;
   propFlights: Map<string, { from: Vec2; to: Vec2; elapsed: number; duration: number }>;
   lastBubbleIndex: number;
   sprintExhausted: boolean;
@@ -60,7 +61,7 @@ export function seededRandom(seed: number): () => number {
 export function initRuntime(state: GameState, homeId: string | null): Runtime {
   const random = seededRandom(state.seed ^ 0x1b0a55);
   const runtime: Runtime = {
-    random, nextEnvironment: 24 + random() * 12, lastEnvironment: -100,
+    random, nextEnvironment: 15 + random() * 3, lastEnvironment: -100,
     lastKinds: {}, nextRuleId: 1, rules: new Map(), orderActive: false,
     pendingReturn: false, workCalm: 0, eventSerial: 0, explicitEvent: null,
     observedEvents: new Set(), eventSeenId: '', eventSeenFor: 0,
@@ -69,7 +70,7 @@ export function initRuntime(state: GameState, homeId: string | null): Runtime {
     nextPathAt: 0, stuckFor: 0, leaveTarget: null, lightUseFor: 0,
     dragDistance: 0, dragSpeed: 0, dragTravelled: 0, dragElapsed: 0,
     potReturningToHand: new Map(), throwWindup: new Map(),
-    potReleasePosition: new Map(), reports: [], propFlights: new Map(),
+    potReleasePosition: new Map(), reports: [], activeReport: null, propFlights: new Map(),
     lastBubbleIndex: -1, sprintExhausted: false,
   };
   runtimes.set(state, runtime);

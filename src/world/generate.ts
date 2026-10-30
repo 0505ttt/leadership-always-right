@@ -73,15 +73,39 @@ export function generateWorld(seed:number):WorldDef {
  for(const id of layout?[layout.home===3?4:0,...shuffled(rooms.filter(r=>r.id!==layout.home&&r.id!==(layout.home===3?4:0)).map(r=>r.id),variation).slice(0,3)]:[0,2,6,7]){const r=rooms[id];walls.push({id:`partition-${id}`,x:r.x-1,z:r.z+1,w:3.2,d:.16,height:2.2,roomId:id,partition:true});}
  const desks:Desk[]=layout?[{id:'home',roomId:layout.home,...local(layout.home,4.8,17.4),seat:local(layout.home,4.8,16),yaw:0,home:true}]:[{id:'home',roomId:1,x:14.4,z:16.45,seat:{x:14.4,z:15.05},yaw:0,home:true}];
  if(layout){
-  // Fixed safe furniture slots leave all door approaches and a 1.8 m main aisle free.
-  const workrooms=rooms.filter(r=>r.kind==='work').map(r=>r.id);
-  const staffRooms=shuffled([...workrooms,...workrooms,rooms.find(r=>r.kind==='boss')!.id],variation).slice(0,6);
-  const used=new Map<number,number>();
-  for(const id of staffRooms){const slot=used.get(id)??0;used.set(id,slot+1);const p=local(id,slot===0?6.7:2.5,slot===0?6:12.5);desks.push({id:`desk-${desks.length}`,roomId:id,...p,seat:{x:p.x,z:p.z-1.2},yaw:0});}
+  // Two workstation banks leave a 3.6 m central aisle. The break between rows
+  // at z=7.2 and z=14 also leaves space to walk around the existing partitions.
+  for(const room of rooms.filter(r=>r.kind==='work'))for(const z of [5,7.2,14])for(const x of [2.2,7.4]){
+   const p=local(room.id,x,z);desks.push({id:`desk-${desks.length}`,roomId:room.id,...p,seat:{x:p.x,z:p.z-1.2},yaw:0});
+  }
+  for(const kind of ['boss','admin']){
+   const room=rooms.find(r=>r.kind===kind)!,p=local(room.id,6.7,6);
+   desks.push({id:`desk-${desks.length}`,roomId:room.id,...p,seat:{x:p.x,z:p.z-1.2},yaw:0});
+  }
  }else for(const [id,x,z] of [[1,17,15.8],[0,5.7,7],[6,15,25],[6,17,31],[5,5.6,27],[8,32,25]] as const) desks.push({id:`desk-${desks.length}`,roomId:id,x,z,seat:{x,z:z-1.2},yaw:0});
- const colleagues:ColleagueDef[]=(layout?shuffled([1,2,3,4,5,6],variation).slice(0,4):[1,2,3,4]).map((di,i)=>{const d=desks[di];return {id:`colleague-${i}`,name:['小周','老陈','小林','阿许'][i],deskId:d.id,roomId:d.roomId,x:d.seat.x,z:d.seat.z,yaw:0,pot:i<2};});
- const props=layout?shuffled(rooms.filter(r=>r.id!==layout.home),variation).slice(0,4).map((r,index)=>({id:index<2?`cake-${index}`:`box-${index-2}`,kind:index<2?'cake' as const:'box' as const,roomId:r.id,...local(r.id,6.8,11.8)})):[{id:'cake-0',kind:'cake' as const,roomId:2,x:26.4,z:10.8},{id:'cake-1',kind:'cake' as const,roomId:7,x:26.6,z:26},{id:'box-0',kind:'box' as const,roomId:7,x:21.5,z:30},{id:'box-1',kind:'box' as const,roomId:4,x:41,z:8}];
- const world:WorldDef={seed,rooms,walls,doors,desks,stations,exits,props,colleagues,spawn:{...desks[0].seat},bossSpawn:layout?local(rooms.find(r=>r.kind==='boss')!.id,7,8):{x:6,z:26},patrol:layout?shuffled(rooms,variation).map(r=>local(r.id,7.3,8)):[{x:5,z:26},{x:15,z:23},{x:25,z:26},{x:35,z:32},{x:45,z:31},{x:45,z:8},{x:33,z:7},{x:24,z:7},{x:14,z:6},{x:5,z:6}],width:48,depth:36,validation:[]};
+ const colleagueDesks=layout?[
+  ...rooms.filter(r=>r.kind==='work').flatMap(room=>shuffled(desks.filter(d=>d.roomId===room.id&&!d.home),variation).slice(0,2)),
+  desks.find(d=>d.roomId===rooms.find(r=>r.kind==='admin')!.id)!,
+ ]:[1,2,3,4].map(index=>desks[index]);
+ const colleagues:ColleagueDef[]=colleagueDesks.map((desk,index)=>({id:`colleague-${index}`,name:['小周','老陈','小林','阿许','阿敏','小唐','小赵'][index],deskId:desk.id,roomId:desk.roomId,x:desk.seat.x,z:desk.seat.z,yaw:desk.yaw,pot:index<2}));
+ // Movable props occupy service-room slots, away from workstation banks and
+ // mandatory operating points. All four cakes may enlarge without sealing a room.
+ const serviceRooms=rooms.filter(room=>room.kind!=='work');
+ const props=layout?[
+  ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`cake-${index}`,kind:'cake' as const,roomId:room.id,...local(room.id,6.8,11.8)})),
+  ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`box-${index}`,kind:'box' as const,roomId:room.id,...local(room.id,2.6,6)})),
+ ]:[{id:'cake-0',kind:'cake' as const,roomId:2,x:26.4,z:10.8},{id:'cake-1',kind:'cake' as const,roomId:7,x:26.6,z:26},{id:'box-0',kind:'box' as const,roomId:7,x:21.5,z:30},{id:'box-1',kind:'box' as const,roomId:4,x:41,z:8}];
+ const bossSpawn=layout?local(rooms.find(r=>r.kind==='boss')!.id,7,8):{x:6,z:26};
+ const workStops=rooms.filter(room=>room.kind==='work').map(room=>{
+  const desk=desks.find(item=>item.roomId===room.id&&!item.home)!;
+  return {x:desk.x+(desk.x<room.x?1.8:-1.8),z:desk.seat.z};
+ });
+ const clockStops=stations.map(station=>({x:station.x+Math.sin(station.yaw)*.95,z:station.z+Math.cos(station.yaw)*.95}));
+ const exitStops=exits.map(exit=>({x:exit.x-exit.outward.x*.95,z:exit.z-exit.outward.z*.95}));
+ // Known fixed inspection locations, independent of the player's live position.
+ // Start inside the leader's own room, then alternate public objectives and desks.
+ const patrol=layout?[{...bossSpawn},clockStops[0],workStops[0],exitStops[0],clockStops[1],workStops[1],exitStops[1],workStops[2]]:[{x:5,z:26},{x:15,z:23},{x:25,z:26},{x:35,z:32},{x:45,z:31},{x:45,z:8},{x:33,z:7},{x:24,z:7},{x:14,z:6},{x:5,z:6}];
+ const world:WorldDef={seed,rooms,walls,doors,desks,stations,exits,props,colleagues,spawn:{...desks[0].seat},bossSpawn,patrol,width:48,depth:36,validation:[]};
  // Reflection varies exterior walls/route direction without changing legal dimensions or topology.
  const mirrorX=random()>.5,mirrorZ=random()>.5;
  const point=(p:Vec2)=>{if(mirrorX)p.x=48-p.x;if(mirrorZ)p.z=36-p.z;};
@@ -93,6 +117,29 @@ export function generateWorld(seed:number):WorldDef {
  for(const p of stations){point(p);facing(p);}
  for(const e of exits){point(e);facing(e);if(mirrorX)e.outward.x*=-1;if(mirrorZ)e.outward.z*=-1;}
  point(world.spawn);point(world.bossSpawn);world.patrol.forEach(point);
+ // Mount switches on a real solid boundary after reflection; a door opening is not a wall.
+ // The control's local +Z face points into its room and its 0.16 m depth touches the wall.
+ for(const room of rooms){
+  const preferred=room.switch,candidates:{x:number;z:number;yaw:number;wallId:string}[]=[];
+  for(const wall of walls){
+   if(wall.crawl||wall.partition)continue;
+   const vertical=wall.d>wall.w;
+   if(vertical&&Math.abs(Math.abs(wall.x-room.x)-room.w/2)<.01){
+    const lo=Math.max(wall.z-wall.d/2,room.z-room.d/2)+.12,hi=Math.min(wall.z+wall.d/2,room.z+room.d/2)-.12;
+    if(hi<lo)continue;
+    const normal=Math.sign(room.x-wall.x);
+    candidates.push({x:wall.x+normal*(wall.w/2+.08),z:Math.max(lo,Math.min(hi,preferred.z)),yaw:normal*Math.PI/2,wallId:wall.id});
+   }else if(!vertical&&Math.abs(Math.abs(wall.z-room.z)-room.d/2)<.01){
+    const lo=Math.max(wall.x-wall.w/2,room.x-room.w/2)+.12,hi=Math.min(wall.x+wall.w/2,room.x+room.w/2)-.12;
+    if(hi<lo)continue;
+    const normal=Math.sign(room.z-wall.z);
+    candidates.push({x:Math.max(lo,Math.min(hi,preferred.x)),z:wall.z+normal*(wall.d/2+.08),yaw:normal>0?0:Math.PI,wallId:wall.id});
+   }
+  }
+  candidates.sort((a,b)=>Math.hypot(a.x-preferred.x,a.z-preferred.z)-Math.hypot(b.x-preferred.x,b.z-preferred.z));
+  if(!candidates.length)throw new Error(`房间 ${room.id} 缺少可挂载开关的实墙`);
+  room.switch=candidates[0];
+ }
  world.validation=[layout?`连接模板：中间横联${layout.cross}`:'备用布局618','10个模块','两条独立回路/三处横向连接','两处可选蹲洞','门净宽2.2米','主路线无台阶'];
  return world;
 }

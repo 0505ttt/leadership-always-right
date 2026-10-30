@@ -1,5 +1,5 @@
 import type { GameState, Vec2, WorldDef, WorldQuery } from '../contracts/game';
-import { makeWorldQuery, pathLength } from './query';
+import { makeWorldQuery, pathLength, switchOperatingPoint } from './query';
 
 export interface MapValidation {
  valid:boolean;
@@ -72,14 +72,14 @@ export function validateWorld(world:WorldDef,state:GameState,query:WorldQuery=ma
   const end=query.move(start,delta,.3,.9,state);
   if(Math.hypot(end.x-(start.x+delta.x),end.z-(start.z+delta.z))>.01)failures.push(`蹲姿无法穿短道:${door.id}`);
  }
- for(const room of world.rooms)if(!Number.isFinite(distance(world.spawn,room.switch)))failures.push(`开关不可达:${room.id}`);
+ for(const room of world.rooms){const point=switchOperatingPoint(room);if(!Number.isFinite(distance(world.spawn,point))||!query.lineOfSight(point,room.switch,1.12,state,'solid'))failures.push(`开关不可达:${room.id}`);}
  if(home){
   if(Math.abs(home.z-home.seat.z)-.425<.9)failures.push('本人座位净空不足0.9米');
   if(!Number.isFinite(distance(world.spawn,home.seat)))failures.push('本人座位无法接入主路');
  }
  // Every room switch was already connected to spawn; use it as a local anchor
  // instead of running ten more whole-building A* searches during startup.
- const locallyConnected=(point:Vec2)=>{const room=query.roomAt(point);return !!room&&Number.isFinite(distance(point,room.switch));};
+ const locallyConnected=(point:Vec2)=>{const room=query.roomAt(point);return !!room&&Number.isFinite(distance(point,switchOperatingPoint(room)));};
  if(!locallyConnected(world.bossSpawn))failures.push('领导出生点无法接入主路');
  for(const waypoint of world.patrol)if(!locallyConnected(waypoint)){failures.push('巡逻点无法接入主路');break;}
  return {valid:failures.length===0,failures,spawnClockDistances,spawnExitDistances,exitSeparation,routes};

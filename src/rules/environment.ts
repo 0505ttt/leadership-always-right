@@ -1,4 +1,4 @@
-import type { ActiveRule, GameState, RuleKind, Vec2, WorldDef, WorldQuery } from '../contracts/game';
+import type { ActiveRule, GameState, RuleKind, Vec2, Wall, WorldDef, WorldQuery } from '../contracts/game';
 import { announceMessage, clamp, copyPoint, distance, logEvent, playerHeight, playerSightHeight, runtimeFor } from './runtime';
 import { attachPot } from './objects';
 import { litAt } from './player';
@@ -32,12 +32,54 @@ function safeCake(state:GameState,id:string,world:WorldDef,query:WorldQuery,scal
   return safe;
 }
 
+function targetLabel(state:GameState,world:WorldDef,kind:RuleKind,targetId:string,roomId:number,sourceOwner?:string):string {
+  const room=world.rooms.find(item=>item.id===roomId)?.name??'办公区';
+  const employee=(id:string)=>id==='player'?'你':state.colleagues.find(item=>item.id===id)?.name??'员工';
+  let object='';
+  if(kind==='cake')object=`${world.props.filter(prop=>prop.kind==='cake').findIndex(prop=>prop.id===targetId)+1}号愿景饼`;
+  else if(kind==='desk') {
+    const desk=world.desks.find(item=>item.id===targetId),owner=state.colleagues.find(item=>item.deskId===targetId);
+    object=desk?.home?'我的工位':owner?`${owner.name}的项目桌`:`${world.desks.findIndex(item=>item.id===targetId)+1}号项目桌`;
+  } else if(kind==='pot')object=`${sourceOwner?`${employee(sourceOwner)}的锅 → `:''}${employee(targetId)}`;
+  else if(kind==='flow')object='中央通道';
+  else if(kind==='transparent')object='局部隔断';
+  else if(kind==='pressure')object='活动顶板';
+  return `${room} · ${object}`;
+}
+
+// Sample the visible face rather than the wall's center, which is itself a vision solid.
+function wallFace(wall:Wall,observer:Vec2):Vec2 {
+  const point={x:clamp(observer.x,wall.x-wall.w/2,wall.x+wall.w/2),z:clamp(observer.z,wall.z-wall.d/2,wall.z+wall.d/2)};
+  const length=distance(point,observer);
+  return length>0?{x:point.x+(observer.x-point.x)*.05/length,z:point.z+(observer.z-point.z)*.05/length}:point;
+}
+
 function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|null {
   const runtime=runtimeFor(state),boss=state.boss;
   const active=state.rules.filter(rule=>spatial(rule)&&rule.phase!=='restoring');
   const occupied=new Set(active.map(rule=>rule.roomId));
+  const playerRoom=query.roomAt(state.player)?.id;
+  const patrolRoom=query.roomAt(world.patrol[boss.patrolIndex%Math.max(1,world.patrol.length)]??boss)?.id;
+  const knownRooms=new Set([query.roomAt(boss)?.id,patrolRoom]);
+  if(visible(state,boss,state.player,10,playerSightHeight(state),query))knownRooms.add(playerRoom);
+  const localRooms=new Set([playerRoom]);
+  for(const door of world.doors) {
+    if((door.a!==playerRoom&&door.b!==playerRoom)||distance(state.player,door)>5)continue;
+    const room=world.rooms.find(item=>item.id===(door.a===playerRoom?door.b:door.a));
+    if(!room)continue;
+    const entry={x:door.x+(door.axis==='z'?Math.sign(room.x-door.x)*.4:0),z:door.z+(door.axis==='x'?Math.sign(room.z-door.z)*.4:0)};
+    if(query.lineOfSight(state.player,entry,playerSightHeight(state),state))localRooms.add(room.id);
+  }
+  const observable=(point:Vec2,roomId:number)=>localRooms.has(roomId)&&distance(state.player,point)<=12&&query.lineOfSight(state.player,point,playerSightHeight(state),state);
   const kinds:Exclude<RuleKind,'return'>[]=['cake','desk','pot','flow','transparent','pressure'];
   for(let index=kinds.length-1;index>0;index--){const swap=Math.floor(runtime.random()*(index+1));[kinds[index],kinds[swap]]=[kinds[swap],kinds[index]];}
+  // Prefer observable effects across all kinds, then retain legitimate remote commands.
+  // The fallback is seeded, never ranked by a hidden player's live location.
+  for(const localOnly of [true,false]) {
+   const choose=<T extends Vec2>(targets:T[],roomId:(target:T)=>number,seen:(target:T)=>boolean=target=>observable(target,roomId(target))):T|undefined=>{
+    if(!localOnly)return targets[Math.floor(runtime.random()*targets.length)];
+    return targets.filter(seen).sort((a,b)=>Number(roomId(a)!==playerRoom)-Number(roomId(b)!==playerRoom)||distance(state.player,a)-distance(state.player,b))[0];
+   };
   for(const kind of kinds) {
     if(state.elapsed-(runtime.lastKinds[kind]??-100)<50)continue;
     if(kind!=='pot'&&active.length>=2)continue;
@@ -45,40 +87,44 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
     if(kind==='cake') {
       const targets=state.props.filter(prop=>prop.kind==='cake'&&!prop.held&&!prop.large&&!occupied.has(prop.roomId)
         &&distance(prop,boss)<=8&&query.lineOfSight(boss,prop,1.3,state)&&safeCake(state,prop.id,world,query));
-      const target=targets[Math.floor(runtime.random()*targets.length)];
+      const target=choose(targets,target=>target.roomId);
       if(!target)continue;targetId=target.id;roomId=target.roomId;
     } else if(kind==='desk') {
       const targets=world.desks.filter(desk=>!occupied.has(desk.roomId)&&(state.deskHeights[desk.id]??.75)<.76
         &&!state.rules.some(rule=>rule.kind==='desk'&&rule.targetId===desk.id)
         &&(desk.home||(distance(boss,desk)<10&&query.lineOfSight(boss,desk,1.4,state))));
-      const target=targets[Math.floor(runtime.random()*targets.length)];
+      const target=choose(targets,target=>target.roomId);
       if(!target)continue;targetId=target.id;roomId=target.roomId;
     } else if(kind==='pot') {
       const sources=state.pots.filter(pot=>{const owner=actor(state,pot.owner);return owner&&pot.phase==='attached'&&pot.cooldown<=0&&visible(state,boss,owner,6,1,query);});
       const targets=[{id:'player',point:state.player},...state.colleagues.map(c=>({id:c.id,point:c}))]
-        .filter(target=>!state.pots.some(pot=>pot.owner===target.id)&&visible(state,boss,target.point,6,target.id==='player'?playerSightHeight(state):1,query));
-      const source=sources[Math.floor(runtime.random()*sources.length)],target=targets[Math.floor(runtime.random()*targets.length)];
+        .filter(target=>!state.pots.some(pot=>pot.owner===target.id)&&visible(state,boss,target.point,6,target.id==='player'?playerSightHeight(state):1,query)
+          &&(!localOnly||target.id==='player'||observable(target.point,query.roomAt(target.point)?.id??-1)));
+      const source=sources[Math.floor(runtime.random()*sources.length)],target=localOnly?targets.sort((a,b)=>distance(state.player,a.point)-distance(state.player,b.point))[0]:targets[Math.floor(runtime.random()*targets.length)];
       if(!source||!target)continue;
       targetId=target.id;roomId=query.roomAt(target.point)?.id??-1;potId=source.id;sourceOwner=source.owner;
     } else if(kind==='flow') {
-      const known=[query.roomAt(boss)?.id,query.roomAt(world.patrol[boss.patrolIndex%Math.max(1,world.patrol.length)]??boss)?.id];
-      const targets=world.rooms.filter(room=>known.includes(room.id)&&!occupied.has(room.id));
-      const target=targets[Math.floor(runtime.random()*targets.length)];
+      const targets=world.rooms.filter(room=>(room.id===query.roomAt(boss)?.id||room.id===patrolRoom)&&!occupied.has(room.id));
+      const target=choose(targets,target=>target.id);
       if(!target)continue;targetId=`room-${target.id}`;roomId=target.id;
     } else if(kind==='transparent') {
-      const targets=world.walls.filter(wall=>wall.partition&&!occupied.has(wall.roomId));
-      const target=targets[Math.floor(runtime.random()*targets.length)];
+      const targets=world.walls.filter(wall=>wall.partition&&!occupied.has(wall.roomId)
+        &&(knownRooms.has(wall.roomId)||(distance(boss,wall)<=10&&query.lineOfSight(boss,wallFace(wall,boss),1.3,state))));
+      const target=choose(targets,target=>target.roomId,target=>observable(wallFace(target,state.player),target.roomId));
       if(!target)continue;targetId=target.id;roomId=target.roomId;
     } else {
       const homeRoom=world.desks.find(desk=>desk.home)?.roomId;
-      const targets=world.rooms.filter(room=>room.pressure&&room.id!==homeRoom&&!occupied.has(room.id));
-      const target=targets[Math.floor(runtime.random()*targets.length)];
+      const targets=world.rooms.filter(room=>room.pressure&&room.id!==homeRoom&&!occupied.has(room.id)&&knownRooms.has(room.id)
+        &&!state.rules.some(rule=>rule.kind==='pressure'&&rule.roomId===room.id));
+      const target=choose(targets,target=>target.id,target=>localRooms.has(target.id));
       if(!target)continue;targetId=`room-${target.id}`;roomId=target.id;
     }
     const definition=definitions[kind];
-    const rule:ActiveRule={id:runtime.nextRuleId++,kind,quote:definition.quote,effect:definition.effect,targetId,roomId,phase:'warning',remaining:3,duration:definition.duration,age:0};
+    const location=localOnly?'':roomId===playerRoom?' · 目标暂不可见':' · 目标在其他房间';
+    const rule:ActiveRule={id:runtime.nextRuleId++,kind,quote:definition.quote,effect:`${targetLabel(state,world,kind,targetId,roomId,sourceOwner)}：${definition.effect}${location}`,targetId,roomId,phase:'warning',remaining:3,duration:definition.duration,age:0};
     runtime.rules.set(rule.id,{potId,sourceOwner});
     return rule;
+  }
   }
   return null;
 }
@@ -133,7 +179,7 @@ function restoreDesk(state:GameState,rule:ActiveRule,dt:number,world:WorldDef):b
   if(under(state.boss))minimum=Math.max(minimum,1.96);
   const next=Math.max(Math.min(current,minimum),current-(1.9-.75)*dt/.8);
   state.deskHeights[desk.id]=next<=.751?.75:next;
-  rule.effect=minimum>.75?'复位受阻 · 桌下有人，离开后安全下降':'桌面正在安全复位';
+  rule.effect=`${targetLabel(state,world,rule.kind,rule.targetId,rule.roomId)}：${minimum>.75?'复位受阻 · 桌下有人，离开后安全下降':'桌面正在安全复位'}`;
   return next<=.751;
 }
 
@@ -196,6 +242,6 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
   if(!rule){runtime.nextEnvironment=state.elapsed+3;return;}
   state.rules.push(rule);runtime.lastEnvironment=state.elapsed;runtime.lastKinds[rule.kind]=state.elapsed;
   runtime.nextEnvironment=state.elapsed+24+runtime.random()*12;
-  state.history.unshift(rule.quote);state.history=state.history.slice(0,30);
+  state.history.unshift(`${rule.quote}（${rule.effect}）`);state.history=state.history.slice(0,30);
   logEvent(state,`rule:${rule.kind}:warning`);
 }
