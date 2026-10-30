@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "gameCommit": "632293f354089c97ab1ae1688bfa3dae154e38f0",
+  "publicUrl": "https://0505ttt.github.io/leadership-always-right/",
+  "buildAndDeploy": {
+    "actionsRunId": "41095551768",
+    "testsPassed": 148,
+    "result": "success"
+  },
+  "status": {
+    "publicDevelopmentPreview": true,
+    "numericTargetsMetInRun2": true,
+    "completeGameAcceptance": false
+  },
+  "method": "原生前台有头Chrome，真实按钮/键鼠输入，地图辅助自动路线；不是人类盲玩。没有写入游戏状态、时间、位置、种子或重置指标。首次效果与长帧全部保留。",
+  "run2": {
+    "startedAt": "2026-10-30T17:58:27.314Z",
+    "finishedAt": "2026-10-30T18:10:10.016Z",
+    "environment": {
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+      "quality": "medium",
+      "cssViewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "drawingBuffer": {
+        "width": 1920,
+        "height": 1080
+      },
+      "dpr": 1,
+      "nativeWindow": {
+        "width": 1450,
+        "height": 903
+      },
+      "displayModes": [
+        "1470 x 956 @ 60.00Hz"
+      ],
+      "powerSources": [
+        "AC Power",
+        "Battery Power"
+      ],
+      "note": "1920x1080为测试CSS视口和真实绘图缓冲；原生窗口1450x903，供电发生切换。"
+    },
+    "activeWallSeconds": 628.6640999999861,
+    "simulatedSeconds": 628.6666666668098,
+    "frames": 37720,
+    "restarts": 3,
+    "averageFPS": 60.000244963885855,
+    "p95Ms": 17.900000000023283,
+    "p99Ms": 18.599999999976717,
+    "worstMs": 18.800000000046566,
+    "longFramesAtLeast100ms": [],
+    "unexpectedPauses": 0,
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "publicEscape": {
+      "seed": 3428604521,
+      "seconds": 40.883333333332295,
+      "ending": "escaped",
+      "catches": 0
+    },
+    "coverage": {
+      "movement": true,
+      "sprint": true,
+      "crouch": true,
+      "jump": true,
+      "lights": true,
+      "rules": true,
+      "chase": true,
+      "capture": true,
+      "sticky": true,
+      "dragReturn": true,
+      "stickyRolling": true
+    },
+    "actualScenes": [
+      "patrol/working/normal",
+      "patrol/standing/normal",
+      "patrol/crouching/normal",
+      "patrol/standing/transparent",
+      "warning/standing/normal",
+      "chase/standing/return",
+      "drag/dragged/return",
+      "leave/working/return",
+      "leave/rolling/return",
+      "leave/rolling/return+flow",
+      "patrol/rolling/return+flow",
+      "patrol/rolling/return",
+      "patrol/rolling/return+transparent",
+      "warning/rolling/return+transparent",
+      "chase/rolling/transparent+return",
+      "drag/dragged/transparent+return",
+      "leave/working/transparent+return",
+      "leave/rolling/transparent+return",
+      "patrol/rolling/transparent+return",
+      "patrol/rolling/return+desk",
+      "patrol/rolling/return+pressure",
+      "patrol/standing/flow",
+      "warning/standing/flow",
+      "patrol/crouching/flow",
+      "patrol/standing/pressure",
+      "search/standing/return",
+      "patrol/standing/desk",
+      "patrol/crouching/desk",
+      "patrol/crouching/pressure",
+      "warning/crouching/pressure",
+      "warning/standing/pressure",
+      "patrol/standing/cake",
+      "patrol/crouching/cake",
+      "warning/standing/desk",
+      "warning/crouching/flow"
+    ],
+    "maxConcurrentEnvironmentRules": 1,
+    "potRuleObserved": false,
+    "potPlusStickyObserved": false,
+    "rounds": [
+      {
+        "index": 0,
+        "mode": "new",
+        "seed": 3428604521,
+        "elapsed": 40.883333333332295,
+        "catches": 0
+      },
+      {
+        "index": 1,
+        "mode": "same",
+        "seed": 3428604521,
+        "elapsed": 180.16666666670218,
+        "catches": 2
+      },
+      {
+        "index": 2,
+        "mode": "new",
+        "seed": 1796281090,
+        "elapsed": 180.13333333336882,
+        "catches": 0
+      },
+      {
+        "index": 3,
+        "mode": "same",
+        "seed": 1796281090,
+        "elapsed": 227.45000000007315,
+        "catches": 0
+      }
+    ],
+    "readyResources": [
+      {
+        "round": 0,
+        "memory": {
+          "geometries": 25,
+          "textures": 122
+        },
+        "programs": 10
+      },
+      {
+        "round": 1,
+        "memory": {
+          "geometries": 52,
+          "textures": 122
+        },
+        "programs": 10
+      },
+      {
+        "round": 2,
+        "memory": {
+          "geometries": 28,
+          "textures": 122
+        },
+        "programs": 10
+      },
+      {
+        "round": 3,
+        "memory": {
+          "geometries": 28,
+          "textures": 122
+        },
+        "programs": 10
+      }
+    ],
+    "modelRequests": {
+      "pot-v1": {
+        "count": 1,
+        "statuses": [
+          200
+        ]
+      },
+      "chair-v1": {
+        "count": 1,
+        "statuses": [
+          200
+        ]
+      }
+    },
+    "retainedConsoleIssue": "https://0505ttt.github.io/favicon.ico 返回404"
+  },
+  "run1RetainedFailure": {
+    "runCompleted": false,
+    "numericTargetsMet": false,
+    "activeWallSeconds": 168.47920000000286,
+    "simulatedSeconds": 167.61666666665974,
+    "restarts": 1,
+    "averageFPS": 91.63148922834236,
+    "p95Ms": 16.80000000000291,
+    "p99Ms": 17.60000000000582,
+    "worstMs": 482.40000000000873,
+    "longFramesAtLeast100ms": [
+      {
+        "ms": 148.10000000000582,
+        "elapsed": 9.833333333333401,
+        "scene": "patrol/standing/normal"
+      },
+      {
+        "ms": 133.39999999999418,
+        "elapsed": 10.016666666666744,
+        "scene": "patrol/standing/normal"
+      },
+      {
+        "ms": 442.40000000000873,
+        "elapsed": 10.116666666666749,
+        "scene": "patrol/standing/normal"
+      },
+      {
+        "ms": 482.40000000000873,
+        "elapsed": 10.266666666666756,
+        "scene": "patrol/standing/normal"
+      },
+      {
+        "ms": 150,
+        "elapsed": 57.56666666666468,
+        "scene": "patrol/standing/desk"
+      }
+    ],
+    "failure": "TimeoutError: page.waitForFunction: Timeout 15000ms exceeded.",
+    "note": "当时起始为外接240Hz，随后只检测到内屏；失锁与长帧根因未确定。未删除失败或声称显示切换是已证实原因。"
+  },
+  "remaining": [
+    "完整办公室外观、正式角色动作与锅椅组合尚待Kimi交付和复核",
+    "真人认为太简单，难度尚未重新验收",
+    "近墙角色占画面过大，Codex镜头可读性待改进",
+    "两条环境规则同时生效及背锅加粘椅组合未在本次GPU运行中覆盖",
+    "首轮失锁和长帧原因仍未确定；第二轮未再现",
+    "正式完整美术接入后需重新测量，最新候选跨浏览器检查未完成",
+    "favicon404仍保留"
+  ],
+  "evidence": {
+    "rawRun2": {
+      "localPath": ".local/playtest-headed-632293f-run2.json",
+      "sha256": "f09749e6e88026af0c9a51a31d12c5cdc95c0de4892f0b33b4eece0430aa34fe"
+    },
+    "rawRun1": {
+      "localPath": ".local/playtest-headed-632293f-run1.json",
+      "sha256": "3c245f2ccfe50442da4db4d9c2b306e635b3025bfbd93cdc655b24b4b6827418"
+    },
+    "driver": {
+      "localPath": ".local/playtest-headed-632293f-run2.mjs",
+      "sha256": "20cfd37fe97edb3d5e2fc89150b9c5b040de96b8b86aafaa0227012c28f3e5db"
+    },
+    "readback": {
+      "localPath": ".local/playtest-headed-632293f-run2-readback.json",
+      "sha256": "a44e3c6b25c74e926bdf7e950ce26325a18adf9e0e2a3d5b884d7f837219c94e"
+    },
+    "screenshot": {
+      "localPath": ".local/playtest-headed-632293f-run2-final.png",
+      "sha256": "d6d30cb7eae18717485d720d890af40ef3a3d64b6a4a4243aba2b3f613259dfa"
+    },
+    "note": "原始记录与图片保留在共享本地工作区；本文件是可公开复核的数据摘要。"
+  }
+}
