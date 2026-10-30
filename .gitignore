@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+.env*
+.local/
+.codegraph/
+.tripo/
+assets/source/
+test-results/
+playwright-report/

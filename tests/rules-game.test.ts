@@ -1,0 +1,211 @@
+import { describe, expect, it } from 'vitest';
+import type { ActiveRule, GameState, InputFrame, WorldDef, WorldQuery } from '../src/contracts/game';
+import { createGame, stepGame } from '../src/rules/game';
+import { runtimeFor } from '../src/rules/runtime';
+import { generateWorld } from '../src/world/generate';
+import { makeWorldQuery } from '../src/world/query';
+
+const idle:InputFrame={moveX:0,moveZ:0,yaw:0,sprint:false,crouchPressed:false,jumpPressed:false,interact:false,interactPressed:false,potPressed:false,dropPressed:false,throwPressed:false,aim:false};
+
+function fixture():{world:WorldDef;query:WorldQuery;state:GameState} {
+  const world:WorldDef={seed:123,rooms:[{id:0,name:'工作区',kind:'work',x:25,z:25,w:50,d:50,lit:true,permanentLight:false,switch:{x:6,z:6},pressure:true}],walls:[],doors:[],desks:[{id:'home',roomId:0,x:4,z:5.2,seat:{x:4,z:4},yaw:0,home:true}],stations:[{id:'clock',roomId:0,x:10,z:10,yaw:0}],exits:[{id:'exit',roomId:0,x:49,z:25,yaw:Math.PI/2,outward:{x:1,z:0}}],props:[{id:'cake',kind:'cake',roomId:0,x:30,z:30},{id:'box',kind:'box',roomId:0,x:30,z:25}],colleagues:[0,1,2,3].map((i)=>({id:`c${i}`,name:`同事${i}`,roomId:0,deskId:`d${i}`,x:20+i*3,z:20,yaw:0,pot:i<2})),spawn:{x:4,z:4},bossSpawn:{x:42,z:42},patrol:[{x:42,z:42},{x:42,z:32}],width:50,depth:50,validation:[]};
+  const query:WorldQuery={roomAt:point=>Math.hypot(point.x-10,point.z-10)<2||Math.hypot(point.x-49,point.z-25)<2?{...world.rooms[0],permanentLight:true}:world.rooms[0],move:(p,d)=>({x:p.x+d.x,z:p.z+d.z}),lineOfSight:()=>true,path:(_,b)=>[{...b}],validPlacement:()=>true,clearance:()=>Infinity,supportHeight:()=>0};
+  return {world,query,state:createGame(world)};
+}
+function run(state:GameState,world:WorldDef,query:WorldQuery,seconds:number,patch:Partial<InputFrame>={}) {
+  const frames=Math.ceil(seconds*60);
+  for(let i=0;i<frames;i++)stepGame(state,{...idle,...patch},Math.min(1/60,seconds-i/60),world,query);
+}
+function stand(state:GameState){state.player.pose='standing';}
+function closeBoss(state:GameState){state.boss.x=state.player.x;state.boss.z=state.player.z+.9;state.boss.yaw=Math.PI;state.boss.path=[];}
+function rule(kind:ActiveRule['kind'],targetId:string,remaining=0):ActiveRule{return {id:99,kind,quote:'测试规则',effect:'测试后果',targetId,roomId:0,phase:'warning',remaining,duration:kind==='desk'?20:kind==='pressure'?14:18,age:0};}
+
+describe('single-match objectives and clock',()=>{
+  it('starts with no work quota, no clock-in, two conserved pots and ten minutes',()=>{
+    const {state}=fixture();expect(state.remaining).toBe(600);expect(state.player.pose).toBe('working');expect(state.clocked).toBe(false);expect(state.pots).toHaveLength(2);expect(new Set(state.pots.map(p=>p.owner)).size).toBe(2);
+  });
+  it('requires clock-in, holds for the true duration, then requires crossing the opened boundary',()=>{
+    const {state,world,query}=fixture();stand(state);
+    state.player.x=48.2;state.player.z=25;
+    run(state,world,query,4.2,{interact:true,yaw:Math.PI/2});expect(state.openedExits).toEqual([]);expect(state.ending).toBeNull();
+    run(state,world,query,.1);
+    state.player.x=10;state.player.z=9.2;
+    run(state,world,query,1.4,{interact:true});expect(state.clocked).toBe(false);
+    run(state,world,query,.11,{interact:true});expect(state.clocked).toBe(true);
+    run(state,world,query,.1);state.player.x=48.2;state.player.z=25;
+    run(state,world,query,3.9,{interact:true,yaw:Math.PI/2});expect(state.openedExits).toEqual([]);
+    run(state,world,query,.12,{interact:true,yaw:Math.PI/2});expect(state.openedExits).toEqual(['exit']);expect(state.ending).toBeNull();
+    run(state,world,query,.6,{moveZ:1,yaw:Math.PI/2});expect(state.ending).toBe('escaped');
+  });
+  it('allows turning the camera during a hold and cancels progress immediately on movement',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=10;state.player.z=9.2;
+    run(state,world,query,.8,{interact:true});run(state,world,query,.3,{interact:true,yaw:Math.PI});expect(state.interaction?.progress).toBeGreaterThan(.7);
+    run(state,world,query,.1,{interact:true,moveX:1});expect(state.clocked).toBe(false);expect(state.interaction?.progress).toBe(0);
+    run(state,world,query,.1);state.player.x=10;state.player.z=9.2;run(state,world,query,1.51,{interact:true});expect(state.clocked).toBe(true);
+  });
+  it('stops at exactly 600 seconds and freezes an already chosen outcome',()=>{
+    const {state,world,query}=fixture();state.elapsed=599.96;state.remaining=.04;
+    run(state,world,query,.1);expect(state.ending).toBe('overtime');expect(state.elapsed).toBe(600);
+    run(state,world,query,5,{moveZ:1});expect(state.ending).toBe('overtime');expect(state.elapsed).toBe(600);
+  });
+});
+
+describe('perception, warning, capture and chairs',()=>{
+  it('waits for observation plus three seconds, then drags back without erasing clock-in',()=>{
+    const {state,world,query}=fixture();stand(state);state.clocked=true;closeBoss(state);
+    world.patrol=[{...state.boss}];
+    run(state,world,query,1.1);expect(state.rules.some(r=>r.kind==='return')).toBe(false);
+    run(state,world,query,.2);expect(state.rules.some(r=>r.phase==='warning')).toBe(true);
+    run(state,world,query,2.8);expect(state.player.pose).not.toBe('dragged');
+    run(state,world,query,1);expect(state.player.pose).toBe('dragged');
+    const caughtAt=state.eventLog.find(event=>event.event==='boss:caught')!.time;
+    for(let i=0;i<240&&!state.player.sticky;i++)run(state,world,query,1/60);
+    expect(state.elapsed-caughtAt).toBeGreaterThanOrEqual(1.98);expect(state.elapsed-caughtAt).toBeLessThanOrEqual(4);
+    expect(state.player.sticky).toBe(true);expect(state.clocked).toBe(true);expect(state.catches).toBe(1);expect(state.player.protection).toBeGreaterThan(7.95);expect(state.boss.mode).toBe('leave');
+    run(state,world,query,.2,{moveZ:1,crouchPressed:true,jumpPressed:true});expect(state.player.pose).toBe('rolling');expect(state.player.y).toBe(0);
+  });
+  it('cancels ordinary warning with actual occlusion, and does not track a hidden player',()=>{
+    const {state,world,query}=fixture();stand(state);closeBoss(state);world.patrol=[{...state.boss}];
+    run(state,world,query,1.3);expect(state.boss.mode).toBe('warning');
+    query.lineOfSight=()=>false;run(state,world,query,.1);expect(state.rules.some(r=>r.phase==='warning')).toBe(false);
+    const old=state.boss.lastSeen&&{...state.boss.lastSeen};state.player.x=30;state.player.z=30;run(state,world,query,.5);expect(state.boss.lastSeen).toEqual(old);
+  });
+  it('interrupts the half-second grab when the player enters darkness',()=>{
+    const {state,world,query}=fixture();stand(state);closeBoss(state);world.patrol=[{...state.boss}];
+    runtimeFor(state).orderActive=true;state.boss.mode='chase';run(state,world,query,.35);expect(state.boss.contactFor).toBeGreaterThan(.3);
+    state.lights[0]=false;run(state,world,query,.3);expect(state.player.pose).not.toBe('dragged');expect(state.boss.contactFor).toBe(0);
+  });
+  it('applies a completed light switch before a same-frame grab could finish',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=6;state.player.z=5.4;closeBoss(state);
+    world.patrol=[{...state.boss}];runtimeFor(state).orderActive=true;state.boss.mode='chase';state.boss.contactFor=.25;
+    run(state,world,query,.25,{interact:true});expect(state.lights[0]).toBe(false);expect(state.player.pose).not.toBe('dragged');expect(state.boss.contactFor).toBe(0);
+  });
+  it('drags a long generated-world route back within four seconds without crossing walls',()=>{
+    for(const seed of [618,42,1030]) {
+      const world=generateWorld(seed),query=makeWorldQuery(world),state=createGame(world),station=world.stations[0];
+      stand(state);state.player.x=station.x;state.player.z=station.z-.9;state.clocked=true;
+      state.boss.x=state.player.x;state.boss.z=state.player.z-.7;state.boss.yaw=0;world.patrol=[{...state.boss},world.spawn];
+      runtimeFor(state).orderActive=true;state.boss.mode='chase';
+      run(state,world,query,.6);expect(state.player.pose).toBe('dragged');
+      const caught=state.eventLog.find(e=>e.event==='boss:caught')!.time;
+      for(let i=0;i<250&&!state.player.sticky;i++) {
+        const from={x:state.player.x,z:state.player.z};stepGame(state,idle,1/60,world,query);
+        expect(query.lineOfSight(from,state.player,1.5,state)).toBe(true);
+      }
+      expect(state.player.sticky).toBe(true);expect(state.elapsed-caught).toBeLessThanOrEqual(4);expect(Math.hypot(state.player.x-world.spawn.x,state.player.z-world.spawn.z)).toBeLessThan(.1);expect(state.clocked).toBe(true);
+    }
+  });
+  it('keeps emergency interaction zones bright when the parent room is dark',()=>{
+    const {state,world,query}=fixture();stand(state);state.lights[0]=false;state.player.x=10;state.player.z=9.2;
+    run(state,world,query,1.51,{interact:true});expect(state.clocked).toBe(true);expect(state.dark).toBe(false);
+  });
+  it('does not clear explicit evidence by sitting or refresh it from the same action',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=10;state.player.z=9.2;closeBoss(state);world.patrol=[{...state.boss}];
+    run(state,world,query,.3,{interact:true});expect(state.boss.evidenceId).not.toBeNull();const until=state.boss.evidenceUntil;
+    run(state,world,query,.6,{interact:true});expect(state.boss.evidenceUntil).toBe(until);
+    state.player.pose='working';run(state,world,query,2.1);expect(state.boss.evidenceUntil).toBe(until);
+  });
+});
+
+describe('pot conservation and delayed reports',()=>{
+  it('transfers on contact, keeps burden while held, and returns a miss without duplication',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=20;state.player.z=19.3;
+    run(state,world,query,.3);expect(state.player.potId).not.toBeNull();expect(state.pots).toHaveLength(2);
+    stepGame(state,{...idle,potPressed:true},1/60,world,query);run(state,world,query,.31);expect(state.player.potInHand).toBe(true);
+    const potId=state.player.potId;stepGame(state,{...idle,throwPressed:true,yaw:Math.PI},1/60,world,query);expect(state.player.potId).toBe(potId);
+    run(state,world,query,1.5,{yaw:Math.PI});expect(state.pots.find(p=>p.id===potId)?.phase).toBe('attached');expect(state.player.potId).toBe(potId);expect(new Set(state.pots.map(p=>p.owner)).size).toBe(2);
+  });
+  it('makes a fired ending only when the flying pot actually intersects the leader',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=20;state.player.z=19.3;run(state,world,query,.3);
+    stepGame(state,{...idle,potPressed:true},1/60,world,query);run(state,world,query,.31);
+    state.player.x=10;state.player.z=10;state.boss.x=10;state.boss.z=13;state.boss.yaw=0;world.patrol=[{x:10,z:13}];
+    stepGame(state,{...idle,aim:true},1/60,world,query);expect(state.aimTarget).toContain('辞退');
+    stepGame(state,{...idle,throwPressed:true},1/60,world,query);run(state,world,query,.65);expect(state.ending).toBe('fired');
+  });
+  it('rejects a second pot on an already burdened colleague and retains both owners',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=20;state.player.z=19.3;run(state,world,query,.3);
+    stepGame(state,{...idle,potPressed:true},1/60,world,query);run(state,world,query,.31);
+    state.player.x=23;state.player.z=17;const owner=state.player.potId;
+    stepGame(state,{...idle,throwPressed:true},1/60,world,query);run(state,world,query,1.5);
+    expect(state.colleagues[1].grudge).toBe(true);expect(state.player.potId).toBe(owner);expect(new Set(state.pots.map(p=>p.owner)).size).toBe(2);expect(state.pots).toHaveLength(2);
+  });
+  it('a wall intercepts a flying pot before a colleague behind it can receive it',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=20;state.player.z=19.3;run(state,world,query,.3);
+    stepGame(state,{...idle,potPressed:true},1/60,world,query);run(state,world,query,.31);
+    state.player.x=26;state.player.z=17;
+    query.lineOfSight=(a,b)=>!(Math.min(a.z,b.z)<18.5&&Math.max(a.z,b.z)>=18.5);
+    stepGame(state,{...idle,throwPressed:true},1/60,world,query);run(state,world,query,1.5);
+    expect(state.player.potId).not.toBeNull();expect(state.colleagues[2].grudge).toBe(false);expect(state.pots).toHaveLength(2);
+  });
+  it('reports a snapshot ten seconds later, never the new hidden position',()=>{
+    const {state,world,query}=fixture();stand(state);const colleague=state.colleagues[2];colleague.grudge=true;state.player.x=colleague.x;state.player.z=colleague.z+3;
+    run(state,world,query,1.1);expect(colleague.reportAt).not.toBeNull();const reported={...colleague.reportPosition!};
+    state.player.x=4;state.player.z=40;state.lights[0]=false;
+    run(state,world,query,10.1);expect(state.eventLog.some(e=>e.event===`colleague:reported:${colleague.id}`)).toBe(true);
+    expect(state.boss.lastSeen).toEqual(reported);expect(state.boss.lastSeen).not.toEqual({x:4,z:40});
+  });
+});
+
+describe('environment and locomotion safety',()=>{
+  it('pulls a player off a box through a legal elevated segment instead of granting permanent immunity',()=>{
+    const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    state.player.x=30;state.player.z=25;state.player.y=.55;
+    state.boss.x=30;state.boss.z=24.25;state.boss.yaw=0;
+    world.patrol=[{...state.boss}];runtimeFor(state).orderActive=true;state.boss.mode='chase';
+    for(let frame=0;frame<40&&state.player.pose!=='dragged';frame++)stepGame(state,idle,.02,world,query);
+    expect(state.player.pose).toBe('dragged');expect(state.player.y).toBe(.55);
+    for(let frame=0;frame<190&&state.player.pose==='dragged';frame++) {
+      stepGame(state,idle,.02,world,query);
+      expect(state.player.y).toBeGreaterThanOrEqual(query.supportHeight(state.player,state)-1e-6);
+    }
+    expect(state.player.sticky).toBe(true);expect(state.player.y).toBe(0);
+  });
+  it('maps camera-right D to screen right at both opposite headings',()=>{
+    for(const [yaw,expectedSign] of [[0,-1],[Math.PI,1]]) {
+      const {state,world,query}=fixture();stand(state);const before=state.player.x;
+      run(state,world,query,.25,{moveX:1,yaw});expect((state.player.x-before)*expectedSign).toBeGreaterThan(.7);
+    }
+  });
+  it('lands on a real box top, can jump again, then falls off without becoming embedded',()=>{
+    const {world}=fixture();world.spawn={x:27.7,z:25};world.bossSpawn={x:45,z:45};
+    const query=makeWorldQuery(world),state=createGame(world);stand(state);
+    state.player.x=28.9;state.player.z=25;
+    stepGame(state,{...idle,jumpPressed:true,yaw:Math.PI/2},1/60,world,query);
+    run(state,world,query,.18,{yaw:Math.PI/2});
+    run(state,world,query,.24,{yaw:Math.PI/2,moveZ:1});
+    run(state,world,query,.8,{yaw:Math.PI/2});
+    expect(state.player.x).toBeGreaterThan(29.425);expect(state.player.y).toBeCloseTo(.55,3);expect(state.player.vy).toBe(0);
+    stepGame(state,{...idle,jumpPressed:true,yaw:Math.PI/2},1/60,world,query);expect(state.player.vy).toBeGreaterThan(0);
+    run(state,world,query,.5,{moveZ:1,yaw:Math.PI/2});run(state,world,query,.6,{yaw:Math.PI/2});
+    expect(state.player.x).toBeGreaterThan(30.6);expect(state.player.y).toBe(0);
+    const before=state.player.x;run(state,world,query,.2,{moveZ:1,yaw:Math.PI/2});expect(state.player.x-before).toBeGreaterThan(.5);
+  });
+  it('keeps exhausted continuous Shift at ordinary speed until some stamina recovers',()=>{
+    const {state,world,query}=fixture();stand(state);run(state,world,query,4.1,{moveZ:1,sprint:true});
+    const from=state.player.z;run(state,world,query,.5,{moveZ:1,sprint:true});expect(state.player.z-from).toBeCloseTo(3.1*.5,2);
+  });
+  it('cannot rise or jump under a crawl opening and preserves deliberate crouch',()=>{
+    const {state,world,query}=fixture();stand(state);query.clearance=()=>.95;run(state,world,query,.1,{jumpPressed:true});expect(state.player.pose).toBe('crouching');expect(state.player.y).toBe(0);
+    state.player.crouchIntent=true;query.clearance=()=>Infinity;run(state,world,query,.1);expect(state.player.pose).toBe('crouching');
+  });
+  it('cancels cake growth if the announced cake has been picked up',()=>{
+    const {state,world,query}=fixture();state.props[0].held=true;state.player.holding=state.props[0].id;state.rules.push(rule('cake','cake'));
+    run(state,world,query,.1);expect(state.props[0].large).toBe(false);expect(state.rules.some(r=>r.kind==='cake')).toBe(false);
+  });
+  it('holds a descending desk safely above a character, then finishes after they leave',()=>{
+    const {state,world,query}=fixture();stand(state);state.player.x=4;state.player.z=5.2;state.deskHeights.home=1.9;
+    state.rules.push({...rule('desk','home'),phase:'restoring'});run(state,world,query,1);expect(state.deskHeights.home).toBeGreaterThanOrEqual(1.9);expect(state.rules[0]?.effect).toContain('受阻');
+    state.player.x=10;run(state,world,query,1);expect(state.deskHeights.home).toBe(.75);expect(state.rules.some(r=>r.kind==='desk')).toBe(false);
+  });
+  it('uses seeded independent per-match schedules and keeps restarts clean',()=>{
+    const a=fixture(),b=fixture();run(a.state,a.world,a.query,36);run(b.state,b.world,b.query,36);
+    expect(a.state.rules).toEqual(b.state.rules);expect(a.state.eventLog).toEqual(b.state.eventLog);
+    const restarted=createGame(a.world);expect(restarted.elapsed).toBe(0);expect(restarted.clocked).toBe(false);expect(restarted.rules).toEqual([]);expect(restarted.pots).toHaveLength(2);
+  });
+  it('creates and runs against the real generated world and collision adapter',()=>{
+    const world=generateWorld(618),state=createGame(world),query=makeWorldQuery(world);
+    stepGame(state,{...idle,interact:true,interactPressed:true,yaw:state.player.yaw},1/60,world,query);
+    expect(state.player.pose).toBe('standing');run(state,world,query,10,{moveX:1,yaw:state.player.yaw});
+    expect(Number.isFinite(state.player.x)).toBe(true);expect(query.roomAt(state.player)).toBeDefined();expect(state.pots).toHaveLength(2);
+  });
+});
