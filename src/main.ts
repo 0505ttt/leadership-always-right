@@ -3,6 +3,7 @@ import { generateWorld } from './world/generate';
 import { makeWorldQuery } from './world/query';
 import { validateWorld } from './world/validate';
 import { OfficeScene } from './presentation/scene';
+import { createCharacterLibrary } from './presentation/characters';
 import { GameInput } from './gameplay/input';
 import { FrameMetrics } from './gameplay/performance';
 import { RuntimeAssets } from './gameplay/assets';
@@ -12,11 +13,12 @@ import type { Page, Settings, UICommand, UIModel } from './contracts/game';
 declare const __BUILD_COMMIT__:string;
 const version=__BUILD_COMMIT__;
 const runtimeAssets=new RuntimeAssets();
-const runtimeSpecs=['pot-v1','chair-v1'].map(id=>({id,url:`${import.meta.env.BASE_URL}assets/tripo/${id}.glb?v=${version}`}));
+const characterLibrary=createCharacterLibrary({assets:runtimeAssets});
+const runtimeSpecs=['employee-base-v1','leader-v1','pot-v1','chair-v1','computer-set-v1','box-v1','clock-station-v1','plant-v1'].map(id=>({id,url:`${import.meta.env.BASE_URL}assets/tripo/${id}.glb?v=${version}`}));
 const defaults:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1};
 let settings={...defaults};try{const saved=JSON.parse(localStorage.getItem('leadership-settings')??'null');if(saved&&typeof saved==='object')settings={...defaults,...saved};}catch{/* A blocked/corrupt preference store must not prevent local gameplay. */}
 let world=generateWorld(618),state=createGame(world),query=makeWorldQuery(world),page:Page='home';
-let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home',lastPausedAt=-Infinity;
+let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home',lastPausedAt=-Infinity,visualAssetsReady=false;
 let scene:OfficeScene,input:GameInput,ui:{render:(m:UIModel)=>void;destroy:()=>void};
 const host=document.querySelector<HTMLElement>('#scene')!,uiRoot=document.querySelector<HTMLElement>('#ui')!;
 const metrics=new FrameMetrics();let accumulator=0,last=performance.now(),uiAccumulator=0,loadingToken=0;
@@ -31,21 +33,31 @@ function resumeFromKeyboard(key:'Escape'|'Enter'){
  return true;
 }
 function begin(){page='playing';phone=false;input.yaw=state.player.yaw;input.setEnabled(true);void input.lock();last=performance.now();accumulator=0;show();}
-function home(){loadingToken++;page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);show();}
-async function loadGame(seed:number){
+function home(){if(!visualAssetsReady){void loadGame(world.seed,'home');return;}loadingToken++;page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);show();}
+async function loadGame(seed:number,nextPage:'ready'|'home'='ready'){
  const token=++loadingToken;page='loading';input.setEnabled(false);scene.clear();loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
  try{
   if(token!==loadingToken)return;
-  let accepted=false;
-  for(let attempt=0;attempt<20;attempt++){world=generateWorld((seed+attempt)>>>0);state=createGame(world);query=makeWorldQuery(world);const result=validateWorld(world,state,query);if(result.valid){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`));accepted=true;break;}}
-  if(!accepted){world=generateWorld(618);state=createGame(world);query=makeWorldQuery(world);if(!validateWorld(world,state,query).valid)throw new Error('办公室校验失败，备用种子也未通过。');}
-  if(token!==loadingToken)return;
   await runtimeAssets.preload(runtimeSpecs,({completed,total})=>{if(token===loadingToken){loadingStage=`读取本局模型与贴图 · ${completed}/${total}件已就绪`;show();}});
-  if(token!==loadingToken)return;scene.useRuntimeAssets(runtimeAssets);
-  loadingStage='准备角色、物件、灯光和规则效果';show();await new Promise(resolve=>requestAnimationFrame(resolve));
   if(token!==loadingToken)return;
-  scene.load(world);scene.render(state,state.player.yaw,input.pitch,'ready',1/60);await scene.prepare();if(token!==loadingToken)return;
-  loadingStage='本局资源与场景已准备完成';page='ready';accumulator=0;show();
+  await characterLibrary.prepare();if(token!==loadingToken)return;
+  scene.useRuntimeAssets(runtimeAssets,runtimeSpecs.map(spec=>spec.id));scene.useCharacterLibrary(characterLibrary);visualAssetsReady=true;
+  loadingStage='装配正式场景并验证陈设、碰撞与必经路线';show();
+  let accepted=false;
+  const seeds=[...Array.from({length:20},(_,attempt)=>(seed+attempt)>>>0),618];
+  for(const candidate of seeds){
+   if(token!==loadingToken)return;
+   world=generateWorld(candidate);state=createGame(world);query=makeWorldQuery(world);
+   if(!validateWorld(world,state,query).valid)continue;
+   scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);
+   if(scene.getRuleVisuals().characters.some(actor=>actor.assetId==='technical-placeholder'))throw new Error('正式角色未接入，停止加载占位成品。');
+   const result=validateWorld(world,state,query);
+   if(result.valid){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`));accepted=true;break;}
+   scene.clear();await new Promise(resolve=>requestAnimationFrame(resolve));
+  }
+  if(!accepted)throw new Error('正式办公室的陈设与通行路线校验失败，备用种子也未通过。');
+  scene.render(state,state.player.yaw,input.pitch,nextPage,1/60);await scene.prepare();if(token!==loadingToken)return;
+  loadingStage='本局资源与场景已准备完成';page=nextPage;accumulator=0;show();
  }catch(e){if(token!==loadingToken)return;error=e instanceof Error?e.message:String(e);page='error';show();}
 }
 function command(cmd:UICommand){
@@ -78,12 +90,11 @@ function technicalShell(root:HTMLElement,onCommand:(c:UICommand)=>void){
 }
 async function boot(){
  try{
-  scene=new OfficeScene(host,settings);scene.load(world);input=new GameInput(scene.canvas,settings,pause,()=>{phone=!phone;input.setPhoneOpen(phone);show();},resumeFromKeyboard);input.yaw=state.player.yaw;
+  scene=new OfficeScene(host,settings);input=new GameInput(scene.canvas,settings,pause,()=>{phone=!phone;input.setPhoneOpen(phone);show();},resumeFromKeyboard);input.yaw=state.player.yaw;
   const modules=import.meta.glob('./ui/views.ts');const importer=modules['./ui/views.ts'];if(importer){const actual=await importer() as {createUI:typeof technicalShell};ui=actual.createUI(uiRoot,command);}else ui=technicalShell(uiRoot,command);
   show();
-  if(preview==='ui'){page='home';show();}
-  if(preview==='character'||preview==='scene'){page='ready';loadingStage='程序占位预览 · 待接入Kimi正式表现组件';show();}
   requestAnimationFrame(frame);
+  await loadGame(618,preview==='character'||preview==='scene'?'ready':'home');
  }catch(e){host.textContent='';uiRoot.style.pointerEvents='auto';const message=document.createElement('p');message.textContent=`无法启动3D画面：${e instanceof Error?e.message:String(e)}。请使用支持WebGL2的桌面浏览器并启用硬件加速。`;uiRoot.append(message);}
 }
 function frame(now:number){
@@ -96,5 +107,5 @@ function frame(now:number){
  requestAnimationFrame(frame);
 }
 // Read-only diagnostics are available for transparent validation. No production teleport/win commands.
-Object.defineProperty(window,'__OFFICE__',{value:{getSnapshot:()=>JSON.parse(JSON.stringify({page,state,world,version,visuals:scene?.getRuleVisuals()})),getPerformance:()=>({...metrics.report(),device:scene?.getMetrics(),userAgent:navigator.userAgent,quality:settings.quality,version}),resetPerformance:()=>metrics.reset()},configurable:false});
+Object.defineProperty(window,'__OFFICE__',{value:{getSnapshot:()=>JSON.parse(JSON.stringify({page,state,world,version,visuals:scene?.getRuleVisuals()})),getCharacterDiagnostics:()=>scene?.getCharacterDiagnostics(state),getPerformance:()=>({...metrics.report(),device:scene?.getMetrics(),userAgent:navigator.userAgent,quality:settings.quality,version}),resetPerformance:()=>metrics.reset()},configurable:false});
 void boot();

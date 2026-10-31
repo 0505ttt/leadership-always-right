@@ -37,7 +37,8 @@ export class RuntimeAssets {
  instantiate(id:string):Object3D{
   if(this.disposed)throw new Error('Runtime assets are disposed');
   const asset=this.entries.get(id)?.asset;if(!asset)throw new Error(`Asset ${id} is not loaded`);
-  const root=clone(asset.scene);root.traverse(node=>{node.userData.runtimeAssetOwned=true;});root.userData.runtimeAssetId=id;
+  const root=clone(asset.scene);root.animations=asset.animations.map(clip=>clip.clone());
+  root.traverse(node=>{node.userData.runtimeAssetOwned=true;});root.userData.runtimeAssetId=id;
   this.instances.add(root);return root;
  }
 

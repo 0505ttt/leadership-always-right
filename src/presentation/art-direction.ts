@@ -1,7 +1,7 @@
 /** Shared visual tokens. Presentation only: no game rules or authoritative state. */
 export const ART_DIRECTION = {
   id: 'eighteen-hundred-institutional-realism',
-  version: 1,
+  version: 2,
   palette: {
     ink: '#171915',
     olive: '#242820',
@@ -33,4 +33,12 @@ export const ASSET_CONTRACTS = {
   'leader-v1': { height: 1.85, up: '+Y', forward: '+Z', origin: 'feet-center' },
   'pot-v1': { diameter: 0.45, up: '+Y', forward: '+Z', origin: 'bowl-center-bottom' },
   'chair-v1': { seatHeight: 0.50, height: 1.10, up: '+Y', forward: '+Z', origin: 'floor-center' },
+  'computer-set-v1': { size: [0.80, 0.50, 0.45], up: '+Y', forward: '+Z', origin: 'bottom-center' },
+  'cake-v1': { size: [0.60, 0.40, 0.60], up: '+Y', forward: '+Z', origin: 'bottom-center' },
+  'box-v1': { size: [0.55, 0.55, 0.55], up: '+Y', forward: '+Z', origin: 'bottom-center' },
+  'clock-station-v1': { size: [0.50, 1.23, 0.36], up: '+Y', forward: '+Z', origin: 'floor-center' },
+  'exit-door-v1': { size: [2.18, 2.28, 0.12], up: '+Y', forward: '+Z', origin: 'floor-center' },
+  'printer-v1': { size: [0.88, 0.48, 0.30], up: '+Y', forward: '+Z', origin: 'bottom-center' },
+  'plant-v1': { size: [0.34, 1.15, 0.34], up: '+Y', forward: '+Z', origin: 'floor-center' },
+  'storage-shelf-v1': { size: [2.10, 1.82, 0.28], up: '+Y', forward: '+Z', origin: 'floor-center' },
 } as const;

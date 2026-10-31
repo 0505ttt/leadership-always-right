@@ -1,0 +1,631 @@
+{
+  "updatedAt": "2026-10-31T02:54:24.401Z",
+  "scope": "Unpublished local camera/difficulty and formal-visual integration candidate. Preserves earlier controlled fixtures and deterministic simulation, and adds a 40-second native-input GPU sample. No new public release, final long-run performance, human difficulty or complete visual acceptance.",
+  "publicRelease": {
+    "commit": "632293f354089c97ab1ae1688bfa3dae154e38f0",
+    "url": "https://0505ttt.github.io/leadership-always-right/",
+    "unchanged": true
+  },
+  "historicalQA": {
+    "branch": "codex/qa-632293f-20261031",
+    "commit": "665f2f7ecd2a535343e60dfed5774d94d6f871b0",
+    "summary": "docs/production/qa-632293f.json",
+    "preserveRun1Failure": true,
+    "doNotTransferOldPerformanceToCandidate": true
+  },
+  "candidate": {
+    "baseCommit": "632293f354089c97ab1ae1688bfa3dae154e38f0",
+    "sourceDirty": true,
+    "releaseCommit": null,
+    "ciRun": null,
+    "status": "awaiting_working_crown_low_ceiling_api_and_source_freeze",
+    "reason": "Kimi environment, props, effects and characterLibrary are now integrated in the local main game with nine formal actors and all eight asset IDs. Ordinary working with a crown pot remains too high for a 1.6 m lowered ceiling; its follow-up API and source freeze are pending before release.",
+    "localTests": {
+      "validatedAtLocal": "2026-10-31 10:46 Asia/Shanghai",
+      "passed": 200,
+      "total": 200,
+      "files": 14,
+      "buildPassed": true,
+      "evidenceReportedBy": "root",
+      "notNewCI": true,
+      "realGLBSeeds": [
+        618,
+        42
+      ],
+      "coverage": [
+        "new model integration",
+        "reachable operating points",
+        "solid collisions",
+        "shared geometry across restarts"
+      ]
+    },
+    "independentReview": {
+      "agent": "typescript_audit",
+      "status": "approved",
+      "scope": [
+        "camera",
+        "difficulty",
+        "private controlled harness"
+      ]
+    },
+    "localTestsHistory": [
+      {
+        "recordedAt": "2026-10-31T01:33:54.222Z",
+        "passed": 179,
+        "total": 179,
+        "buildPassed": true,
+        "evidenceReportedBy": "root",
+        "notNewCI": true
+      }
+    ],
+    "integrationReviews": {
+      "status": "approved",
+      "reviewers": [
+        "code-reviewer",
+        "typescript_audit"
+      ],
+      "scope": "Related latest formal asset, collision, patrol and cache increments; not acceptance of the pending working/crown low-ceiling fix"
+    }
+  },
+  "camera": {
+    "hideDistanceMetres": 1.2,
+    "restoreDistanceMetres": 1.5,
+    "hiddenObjects": "Local player body and attached/held items only",
+    "flyingAndReturningPotRemainVisible": true,
+    "controlledCheck": {
+      "artifact": ".local/complex-camera-2026-10-30T23-43-01-764Z.json",
+      "artifactSha256": "e491da40489c558256247104c033e6493df66860f85378c463d509e1ba939f1e",
+      "started": "2026-10-30T23:43:01.764Z",
+      "closedAt": "2026-10-30T23:43:34.007Z",
+      "wallSeconds": 32.243,
+      "method": "PRIVATE local DEV snapshot; controlled fixture and simulation inputs; headless rendering functional check ONLY; no natural-play or performance acceptance",
+      "screenshotCount": 12,
+      "screenshotNames": [
+        "near-attached-pot",
+        "away-attached-pot",
+        "returned-near-wall",
+        "near-held-pot",
+        "near-flying-pot",
+        "near-returning-pot",
+        "near-held-box",
+        "away-held-box",
+        "pressure-automatic-crouch",
+        "pressure-away-crouch",
+        "controlled-pressure-desk-pot-sticky",
+        "controlled-combination-away"
+      ],
+      "functionalPassed": true,
+      "performanceAccepted": false,
+      "pageErrorCount": 0,
+      "requestFailureCount": 0,
+      "knownConsoleError": "favicon.ico 404",
+      "naturalPlay": false,
+      "humanAcceptance": false
+    }
+  },
+  "complexRules": {
+    "testCount": 17,
+    "twoSpatialPairMatrixCount": 10,
+    "scope": [
+      "two-space matrix",
+      "pot and sticky chair under a low ceiling",
+      "capture and drag",
+      "blocked restoration",
+      "complete input-driven clock-out and escape"
+    ],
+    "controlledAnnouncementSpacing": true,
+    "naturalSchedulerIntervalSeconds": [
+      24,
+      36
+    ],
+    "naturalTwoSpatialActiveOverlapProduced": false,
+    "note": "Controlled timing covers permitted overlap stress states. Return plus another rule is not two spatial rules; these checks do not claim natural overlap or GPU performance acceptance."
+  },
+  "difficulty": {
+    "method": "Deterministic state simulation, 30 Hz inputs, real rule engine/navigation; NOT browser or human difficulty acceptance",
+    "baselineCommit": "632293f354089c97ab1ae1688bfa3dae154e38f0",
+    "seeds": [
+      618,
+      42,
+      1030,
+      20261031,
+      1001,
+      1002,
+      1003,
+      1004,
+      1005,
+      1006,
+      1007,
+      1008
+    ],
+    "strategy": "Before/after take the shortest clock then shortest exit and ignore the leader. Observe switches to the other clock/exit once only when the leader is within 10 m and actual line-of-sight succeeds; it does not inspect hidden positions to choose a route.",
+    "stats": {
+      "before": {
+        "escaped": 12,
+        "caughtRuns": 3,
+        "totalCatches": 3,
+        "medianSeconds": 28.75,
+        "minSeconds": 27.8,
+        "maxSeconds": 62.77
+      },
+      "after": {
+        "escaped": 12,
+        "caughtRuns": 7,
+        "totalCatches": 8,
+        "medianSeconds": 33.93,
+        "minSeconds": 27.97,
+        "maxSeconds": 74.07
+      },
+      "observe": {
+        "escaped": 12,
+        "caughtRuns": 2,
+        "totalCatches": 2,
+        "medianSeconds": 36.185,
+        "minSeconds": 27.97,
+        "maxSeconds": 48.63
+      }
+    },
+    "rows": [
+      {
+        "seed": 618,
+        "before": {
+          "seconds": 28.33,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 28.33,
+          "catches": 0
+        },
+        "observe": {
+          "seconds": 34.47,
+          "catches": 0,
+          "clock": "clock-admin",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 42,
+        "before": {
+          "seconds": 28.7,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 34.03,
+          "catches": 1
+        },
+        "observe": {
+          "seconds": 39.97,
+          "catches": 0,
+          "clock": "clock-print",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 1030,
+        "before": {
+          "seconds": 62.77,
+          "catches": 1
+        },
+        "after": {
+          "seconds": 74.07,
+          "catches": 2
+        },
+        "observe": {
+          "seconds": 31.73,
+          "catches": 0,
+          "clock": "clock-print",
+          "exit": "exit-east"
+        }
+      },
+      {
+        "seed": 20261031,
+        "before": {
+          "seconds": 27.97,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 27.97,
+          "catches": 0
+        },
+        "observe": {
+          "seconds": 27.97,
+          "catches": 0,
+          "clock": "clock-admin",
+          "exit": "exit-east"
+        }
+      },
+      {
+        "seed": 1001,
+        "before": {
+          "seconds": 34.2,
+          "catches": 1
+        },
+        "after": {
+          "seconds": 47.23,
+          "catches": 1
+        },
+        "observe": {
+          "seconds": 48.63,
+          "catches": 0,
+          "clock": "clock-print",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 1002,
+        "before": {
+          "seconds": 28.83,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 34.57,
+          "catches": 1
+        },
+        "observe": {
+          "seconds": 31,
+          "catches": 0,
+          "clock": "clock-print",
+          "exit": "exit-east"
+        }
+      },
+      {
+        "seed": 1003,
+        "before": {
+          "seconds": 28.8,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 33.83,
+          "catches": 1
+        },
+        "observe": {
+          "seconds": 40.43,
+          "catches": 0,
+          "clock": "clock-print",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 1004,
+        "before": {
+          "seconds": 28.57,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 28.57,
+          "catches": 0
+        },
+        "observe": {
+          "seconds": 42.07,
+          "catches": 0,
+          "clock": "clock-print",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 1005,
+        "before": {
+          "seconds": 32.87,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 38.33,
+          "catches": 1
+        },
+        "observe": {
+          "seconds": 42.6,
+          "catches": 1,
+          "clock": "clock-print",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 1006,
+        "before": {
+          "seconds": 52.5,
+          "catches": 1
+        },
+        "after": {
+          "seconds": 31.43,
+          "catches": 0
+        },
+        "observe": {
+          "seconds": 31.43,
+          "catches": 0,
+          "clock": "clock-admin",
+          "exit": "exit-east"
+        }
+      },
+      {
+        "seed": 1007,
+        "before": {
+          "seconds": 28.63,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 28.63,
+          "catches": 0
+        },
+        "observe": {
+          "seconds": 37.9,
+          "catches": 1,
+          "clock": "clock-print",
+          "exit": "exit-west"
+        }
+      },
+      {
+        "seed": 1008,
+        "before": {
+          "seconds": 27.8,
+          "catches": 0
+        },
+        "after": {
+          "seconds": 45.03,
+          "catches": 1
+        },
+        "observe": {
+          "seconds": 30.73,
+          "catches": 0,
+          "clock": "clock-admin",
+          "exit": "exit-east"
+        }
+      }
+    ],
+    "sourceSha256": {
+      "src/rules/boss.ts": "611a88f465824259bb5f171f2adf55f7313f31b5651bc542b59df722f634ec6e",
+      "src/rules/runtime.ts": "04367b6b47a76bf4b82af8c7fcf11917b57f2bbbfe0c1c12b739de9eee4de8fa",
+      "src/world/generate.ts": "a36c5763bec5bfadeddc0c2d8c54b3eadd7969a2e91e4aa229e92abf61998313",
+      "tests/difficulty.test.ts": "4de172f9fa18ca4c09df776fd5e9987bf7f8c89510d9a5d3ebdf5ba48e17cc6b"
+    },
+    "sourceSummary": ".local/difficulty-summary.json",
+    "script": ".local/difficulty-bench.ts",
+    "scriptSha256": "35bb8018bc31004cb39c1d7618b97e9873c10b1cb3a0b05284b6c2b1bd58313c",
+    "baselineRecheck": {
+      "artifact": ".local/difficulty-baseline-recheck.json",
+      "sourceArchive": ".local/difficulty-baseline-632.SCtdor",
+      "sourceMethod": "git archive of baseline commit src; rerun the same bench",
+      "bundleSha256": "4a223341a6646fd8fd7e958514d570ea74d3ea643ba41eb9f511e8cb72da3662",
+      "verifiedBy": "root",
+      "allOriginalBeforeFieldsMatch": true,
+      "explicitComparedFields": [
+        "events",
+        "seconds",
+        "bossStart",
+        "bossEnd"
+      ],
+      "onlyAddedFields": {
+        "changedClock": false,
+        "changedExit": false
+      }
+    },
+    "rawObserveLabelCorrection": {
+      "artifact": ".local/difficulty-observe.json",
+      "rawScriptLabel": "deterministic path follower; ignores the boss; no browser/human validation",
+      "rawPreserved": true,
+      "actualPolicy": "Observe may switch clock and exit once each only when the leader is within 10 m and actual line of sight succeeds. The raw fixed script label is inaccurate; the summary states the actual policy."
+    },
+    "earlyIterationsPreserved": [
+      ".local/difficulty-after1.json",
+      ".local/difficulty-after2.json"
+    ],
+    "limits": [
+      "No observation policy is guaranteed safe: 2/12 reactive routes were still captured.",
+      "All 12 blind routes can still escape; some remain below 30 seconds. This is material threat improvement, not proof of mature difficulty.",
+      "Fallback seed 618 layout preserved.",
+      "After1 and after2 data retained to show initial tuning did not improve caught-run count."
+    ],
+    "humanDifficultyAccepted": false
+  },
+  "kimi": {
+    "realUserStartedConversation": "接续完整视觉制作",
+    "instructionReceivedLocal": "2026-10-31 07:40 Asia/Shanghai",
+    "working": true,
+    "integrated": [
+      "UI",
+      "environment",
+      "props",
+      "effects",
+      "characterLibrary",
+      "all eight listed runtime asset IDs"
+    ],
+    "charactersAndEnvironmentStillPlaceholders": false,
+    "newModulesWritten": [
+      "visual-utils",
+      "props",
+      "effects",
+      "environment",
+      "characterLibrary"
+    ],
+    "moduleAPIHandoffAndIntegration": "Formal modules delivered and locally integrated; ordinary working/crown low-ceiling follow-up API pending",
+    "fullVisualAcceptance": false,
+    "codexTripoGenerationAuthorization": false,
+    "integrationScope": "unpublished local main game; public 632 retains its previous presentation",
+    "public632CharactersAndEnvironmentStillPlaceholders": true
+  },
+  "pending": [
+    "ordinary working/crown low-ceiling pose API and integration",
+    "formal candidate source freeze, release commit and clean CI",
+    "public version readback and functional retest with all eight asset IDs",
+    "reviewed 90-second controlled GPU and 600-second/three-restart public runs, not yet executed",
+    "natural camera usability and human difficulty acceptance",
+    "full Kimi visual and character/prop/chair contact and combination acceptance",
+    "current candidate cross-browser checks",
+    "root cause of historical 632 run1 lock loss and long frames"
+  ],
+  "localEvidenceFilesAreNotPublishedAssets": true,
+  "formalIntegration": {
+    "scope": "unpublished local main game",
+    "reportedBy": "root browser read-only readback",
+    "modules": [
+      "environment",
+      "props",
+      "effects",
+      "characterLibrary"
+    ],
+    "formalActors": {
+      "employee": 8,
+      "leader": 1,
+      "total": 9
+    },
+    "allEightAssetIDsInstantiated": true,
+    "instantiatedCounts": {
+      "employee-base-v1": 8,
+      "leader-v1": 1,
+      "pot-v1": 2,
+      "chair-v1": 30,
+      "computer-set-v1": 21,
+      "box-v1": 4,
+      "clock-station-v1": 2,
+      "plant-v1": 3
+    },
+    "countsDoNotClaimAllInstancesVisibleInOneFrame": true,
+    "notIntegrated": [
+      "candidate cake",
+      "candidate shelf",
+      "unselected door",
+      "unselected printer"
+    ],
+    "clockStationPatrolFix": "Moved the leader patrol point to the operating side to avoid overlap with the new solid clock-station model",
+    "staticWorkingCPUComparison": {
+      "beforeMs": 35.52,
+      "afterMs": 2.09,
+      "reportedBy": "root",
+      "reuseOnlyStaticWorking": true,
+      "dynamicPosesStillUpdateEveryFrame": true,
+      "isWholeGameFPSClaim": false
+    },
+    "dimensions": {
+      "artifact": ".local/formal-character-cpu-20261031-run4.json",
+      "artifactSha256": "8e63987bdbc38a4bfda6806234682e9a9117aa1050c6e3a9161bfb9303cb8933",
+      "startedAt": "2026-10-31T02:40:38.642Z",
+      "finishedAt": "2026-10-31T02:40:39.585Z",
+      "method": "real-shipped-GLB CPU integration and dimension measurement",
+      "limitations": [
+        "Textures are omitted in memory; no GLB on disk is changed.",
+        "No GPU, rendered appearance, FPS, chair contact quality or complete gameplay acceptance is claimed.",
+        "Dimension checks are recorded separately from technical integration assertions."
+      ],
+      "sourceChangedDuringRun": false,
+      "measurementsComplete": true,
+      "rawDimensionsAccepted": true,
+      "measurements": [
+        {
+          "kind": "employee",
+          "pose": "standing",
+          "pot": "none",
+          "heightMetres": 1.7525026691738166,
+          "ceilingLimitMetres": null,
+          "dimensionPassed": null
+        },
+        {
+          "kind": "employee",
+          "pose": "standing",
+          "pot": "none",
+          "heightMetres": 1.4888044347761573,
+          "ceilingLimitMetres": null,
+          "dimensionPassed": null
+        },
+        {
+          "kind": "employee",
+          "pose": "working",
+          "pot": "crown",
+          "heightMetres": 1.701388818689281,
+          "ceilingLimitMetres": null,
+          "dimensionPassed": null
+        },
+        {
+          "kind": "employee",
+          "pose": "crouching",
+          "pot": "none",
+          "heightMetres": 0.8989202179815426,
+          "ceilingLimitMetres": 0.9,
+          "dimensionPassed": true
+        },
+        {
+          "kind": "employee",
+          "pose": "rolling",
+          "pot": "crown",
+          "heightMetres": 1.336713843068615,
+          "ceilingLimitMetres": 1.42,
+          "dimensionPassed": true
+        },
+        {
+          "kind": "employee",
+          "pose": "dragged",
+          "pot": "none",
+          "heightMetres": 1.4540889393203067,
+          "ceilingLimitMetres": null,
+          "dimensionPassed": null
+        },
+        {
+          "kind": "leader",
+          "pose": "crouching",
+          "pot": "none",
+          "heightMetres": 0.9617638539704343,
+          "ceilingLimitMetres": 1.6,
+          "dimensionPassed": true
+        }
+      ],
+      "interpretation": "The raw dimensionsAccepted flag covers only measurements with an explicit ceilingLimit. The ordinary working/crown row has ceilingLimit=null and dimensionPassed=null; it does not pass a 1.6 m ceiling check.",
+      "completeLowCeilingAcceptance": false,
+      "pendingWorkingCrown": {
+        "measuredHeightMetres": 1.701388818689281,
+        "ceilingMetres": 1.6,
+        "excessMetres": 0.10138881868928085,
+        "status": "fix requested; follow-up API pending",
+        "handedOffLocal": "2026-10-31 10:45 Asia/Shanghai",
+        "recipient": "A"
+      }
+    }
+  },
+  "shortNativePerformance": {
+    "scope": "Local formal-integrated main game; root native keyboard/mouse and read-only frame report",
+    "reportedBy": "root",
+    "effectiveSeconds": 40.0164,
+    "frames": 2401,
+    "averageFPS": 60.0004,
+    "p95Ms": 17.1,
+    "p99Ms": 17.6,
+    "worstMs": 17.8,
+    "longFramesAtLeast100ms": 0,
+    "device": {
+      "renderer": "Apple M5 / Metal",
+      "quality": "medium",
+      "css": {
+        "width": 1280,
+        "height": 745
+      },
+      "drawingBuffer": {
+        "width": 1887,
+        "height": 1098
+      },
+      "dpr": 2
+    },
+    "isPublicVersion": false,
+    "isTenMinuteOrThreeRestartAcceptance": false,
+    "isFullPerformanceAcceptance": false
+  },
+  "longValidationPreparation": {
+    "scripts": [
+      {
+        "path": ".local/complex-headed-gpu.mjs",
+        "scope": "controlled GPU combinations",
+        "minimumSeconds": 90
+      },
+      {
+        "path": ".local/complex-headed-candidate.mjs",
+        "scope": "public candidate natural gameplay and restarts",
+        "minimumSeconds": 600,
+        "minimumRestarts": 3
+      }
+    ],
+    "independentlyReviewed": true,
+    "requiredAssetIDCount": 8,
+    "executed": false,
+    "awaiting": [
+      "working/crown low-ceiling API",
+      "formal source freeze",
+      "real candidate commit"
+    ]
+  }
+}

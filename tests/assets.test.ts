@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { Bone, BoxGeometry, DataTexture, Group, InstancedMesh, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial, Points, PointsMaterial, Skeleton, SkinnedMesh } from 'three';
+import { AnimationClip, AnimationMixer, Bone, BoxGeometry, DataTexture, Group, InstancedMesh, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial, NumberKeyframeTrack, Points, PointsMaterial, Skeleton, SkinnedMesh } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RuntimeAssets } from '../src/gameplay/assets';
 
@@ -11,6 +11,17 @@ function fixture(skinned=false):GLTF {
  return {scene,scenes:[scene],animations:[],cameras:[],asset:{version:'2.0'},parser:{} as GLTF['parser'],userData:{}};
 }
 function deferred<T>(){let resolve!:(value:T)=>void,reject!:(reason:Error)=>void;const promise=new Promise<T>((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};}
+
+it('carries GLTF animation clips into independent playable actor instances',async()=>{
+ const model=fixture(),clip=new AnimationClip('walk',1,[new NumberKeyframeTrack('.position[x]',[0,1],[2,3])]);
+ model.animations=[clip];const assets=new RuntimeAssets(async()=>model);await assets.load('person','/person.glb');
+ const first=assets.instantiate('person'),second=assets.instantiate('person'),mixer=new AnimationMixer(first);
+ mixer.clipAction(first.animations[0]).play();mixer.update(.5);
+ expect(first.position.x).toBeCloseTo(2.5);expect(second.position.x).toBe(2);expect(model.scene.position.x).toBe(2);
+ first.animations[0].tracks[0].values[1]=9;
+ expect(second.animations[0].tracks[0].values[1]).toBe(3);expect(clip.tracks[0].values[1]).toBe(3);
+ mixer.stopAllAction();mixer.uncacheRoot(first);assets.dispose();
+});
 
 it('deduplicates concurrent and completed loads while rejecting an ambiguous asset version',async()=>{
  const pending=deferred<GLTF>(),loader=vi.fn(()=>pending.promise),assets=new RuntimeAssets(loader);

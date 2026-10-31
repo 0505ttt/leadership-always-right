@@ -41,7 +41,7 @@ describe('functional office density',()=>{
    const approaches=[{x:prop.x-1,z:prop.z},{x:prop.x+1,z:prop.z},{x:prop.x,z:prop.z-1},{x:prop.x,z:prop.z+1}];
    expect(approaches.some(p=>query.path(world.spawn,p,state).length>0),prop.id).toBe(true);
   }
-  expect(query.roomAt(world.bossSpawn)?.kind).toBe('boss');expect(gap(world.bossSpawn,world.spawn)).toBeGreaterThan(8);
+  expect(world.stations.some(station=>gap(station,world.bossSpawn)<1.1)).toBe(true);expect(gap(world.bossSpawn,world.spawn)).toBeGreaterThan(8);
   expect(world.patrol[0]).toEqual(world.bossSpawn);
   for(const objective of [...world.stations,...world.exits])expect(world.patrol.some(p=>gap(p,objective)<1.1),objective.id).toBe(true);
   for(const room of world.rooms.filter(r=>r.kind==='work'))expect(world.patrol.some(p=>query.roomAt(p)?.id===room.id&&world.desks.some(d=>d.roomId===room.id&&gap(p,d.seat)<2))).toBe(true);

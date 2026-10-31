@@ -92,7 +92,7 @@ describe('environment rule lifecycle with actual collision queries',()=>{
   const desk=world.desks.find(item=>item.id==='desk-3')!;
   expect(world.rooms.find(room=>room.id===desk.roomId)?.pressure).toBe(true);
   Object.assign(state.player,{x:desk.x,z:desk.z,y:query.supportHeight(desk,state),vy:0,pose:'standing'});
-  const originalFeet=state.player.y;expect(originalFeet).toBeCloseTo(.831);
+  const originalFeet=state.player.y;expect(originalFeet).toBeCloseTo(.75);
   runtimeFor(state).nextEnvironment=Infinity;
   state.rules.push({id:99,kind:'pressure',quote:'测试压力',effect:'测试后果',targetId:`room-${desk.roomId}`,roomId:desk.roomId,phase:'warning',remaining:0,duration:14,age:0});
   updateEnvironment(state,0,world,query);
@@ -103,7 +103,7 @@ describe('environment rule lifecycle with actual collision queries',()=>{
   };
   for(let frame=0;frame<120;frame++)step();
   expect(state.player.pose).toBe('crouching');expect(state.player.y).toBe(originalFeet);
-  expect(state.pressureHeights[desk.roomId]).toBeCloseTo(1.781);
+  expect(state.pressureHeights[desk.roomId]).toBeCloseTo(1.7);
   for(let frame=0;frame<120;frame++)step(true);
   expect(state.player.y).toBe(0);expect(state.player.pose).toBe('crouching');
   expect(state.pressureHeights[desk.roomId]).toBeCloseTo(1.6);

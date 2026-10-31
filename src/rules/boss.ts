@@ -216,8 +216,13 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
   const returnWarning=state.rules.find(rule=>rule.kind==='return'&&rule.phase==='warning');
   if(returnWarning&&boss.evidenceUntil<=state.elapsed&&(!sees||player.pose==='working')) {
     state.rules=state.rules.filter(rule=>rule!==returnWarning);runtime.rules.delete(returnWarning.id);
-    runtime.pendingReturn=false;boss.mode='patrol';boss.seenFor=0;
-    announceMessage(state,'离岗预警取消 · 他暂时没抓到把柄。',2);logEvent(state,'boss:warning-cancelled');
+    runtime.pendingReturn=false;boss.seenFor=0;
+    // Occlusion cancels the order, not the leader's actual visual memory. The
+    // old point is investigated without capture authority or hidden tracking.
+    boss.mode=!sees&&boss.lastSeen?'search':'patrol';boss.searchFor=0;
+    boss.path=[];runtime.nextPathAt=0;runtime.stuckFor=0;
+    announceMessage(state,boss.mode==='search'?'离岗预警取消 · 领导正查看最后目击处。':'离岗预警取消 · 他暂时没抓到把柄。',2);
+    logEvent(state,'boss:warning-cancelled');
   }
   if(sees) {
     runtime.activeReport=null;boss.lastSeen=copyPoint(player);boss.searchFor=0;
@@ -251,7 +256,18 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
   }
   boss.contactFor=0;
   if(boss.mode==='warning') {
-    if(boss.lastSeen&&distance(boss,boss.lastSeen)>1.3)moveBoss(state,boss.lastSeen,1.2,dt,world,query);
+    // Return-to-work warnings keep the normal walking pace. moveBoss alone
+    // applies the 1.2 m/s slowdown while an environment rule is announced.
+    if(boss.lastSeen&&distance(boss,boss.lastSeen)>1.3)moveBoss(state,boss.lastSeen,2,dt,world,query);
+    if(sees)boss.yaw=Math.atan2(player.x-boss.x,player.z-boss.z);
+    return;
+  }
+  if(boss.mode==='patrol'&&sees&&boss.seenFor>0&&player.protection<=0) {
+    // Finish observing a person actually in view instead of immediately
+    // turning away toward the next waypoint. Ordinary 1.2 s observation and
+    // the full 3 s warning still apply before any capture can occur.
+    if(distance(boss,player)>1.3)moveBoss(state,boss.lastSeen!,2,dt,world,query);
+    boss.yaw=Math.atan2(player.x-boss.x,player.z-boss.z);
     return;
   }
   if(boss.mode==='search') {
@@ -277,8 +293,21 @@ export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQ
   }
   const target=world.patrol[boss.patrolIndex%Math.max(1,world.patrol.length)];
   if(!target)return;
-  if(moveBoss(state,target,2,dt,world,query)||runtime.stuckFor>7.5) {
-    boss.patrolIndex=(boss.patrolIndex+1)%world.patrol.length;runtime.nextPathAt=0;runtime.stuckFor=0;
+  const arrived=moveBoss(state,target,2,dt,world,query);
+  if(arrived||runtime.stuckFor>7.5) {
+    const publicStop=[...world.stations,...world.exits].some(point=>distance(point,target)<1.5);
+    if(arrived&&publicStop) {
+      if(runtime.patrolInspection?.index!==boss.patrolIndex) {
+        runtime.patrolInspection={index:boss.patrolIndex,until:state.elapsed+3.6};
+        logEvent(state,'boss:patrol-inspection');
+      }
+      if(state.elapsed<runtime.patrolInspection.until) {
+        boss.yaw+=dt*Math.PI*2/3.6;
+        return;
+      }
+    }
+    boss.patrolIndex=(boss.patrolIndex+1)%world.patrol.length;
+    runtime.nextPathAt=0;runtime.stuckFor=0;runtime.patrolInspection=null;
   }
 }
 

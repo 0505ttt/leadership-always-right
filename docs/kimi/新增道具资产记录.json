@@ -1,0 +1,423 @@
+{
+  "recordVersion": 1,
+  "recordedAt": "2026-10-31",
+  "scope": "仅限八个新增道具ID的源模型、运行GLB、独立预览与交付状态；不含角色、表现源码、既有四个运行模型、共享manifest、Codex场景接入或整局验收",
+  "units": "m",
+  "coordinateConvention": {
+    "up": "+Y",
+    "forward": "+Z",
+    "origin": "bottom-center"
+  },
+  "generation": {
+    "provider": "Tripo",
+    "modelVersion": "v3.1-20260211",
+    "taskCount": 8,
+    "creditsPerTask": 30,
+    "totalCreditsConsumed": 240,
+    "additionalGenerationSubmitted": false
+  },
+  "statusSummary": {
+    "independentReviewPassed": 4,
+    "candidates": 2,
+    "notAdopted": 2
+  },
+  "verification": {
+    "sourceInspection": "docs/kimi/verification/new-props/source-inspection.json",
+    "exportReport": "docs/kimi/verification/new-props/export-report.json",
+    "runtimeVerification": "docs/kimi/verification/new-props/runtime-verification.json",
+    "runtimeCaptures": 24,
+    "browserErrors": [],
+    "ownedServerStopped": true,
+    "portReleased": true,
+    "sourceBinPreserved": true,
+    "embeddedTexturesPreserved": true,
+    "meshoptApplied": false,
+    "note": "六件运行GLB仅增加外部根节点变换，保留源BIN与内嵌JPEG；原始索引拓扑不等于焊接后的拓扑、视觉穿插或可打印性结论。独立预览通过不等于游戏接入或整局验收。"
+  },
+  "assets": [
+    {
+      "assetId": "computer-set-v1",
+      "taskId": "fa50cabc-9e79-4548-8c2e-1720f6d677c8",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "independent-review-passed",
+      "productionRecommendation": "可由Codex按实测包络接入",
+      "reviewConclusion": "屏幕、键盘和鼠标朝向+Z；四视角未见明显变形或悬空，通过独立视觉复核。",
+      "targetSizeMeters": [0.8, 0.5, 0.45],
+      "triangles": 5681,
+      "source": {
+        "path": "assets/source/tripo/computer-set-v1/v1/tripo-out/computer-set-v1-fa50cabc/model.glb",
+        "bytes": 884836,
+        "sha256": "db7a26d011d0088365076f09776d7498a58026fb2056c774f856d0e93bdfff12",
+        "sizeMeters": [0.7925635874271393, 0.7495107650756836, 1.0]
+      },
+      "runtime": {
+        "path": "public/assets/tripo/computer-set-v1.glb",
+        "bytes": 885264,
+        "sha256": "6c27560c9016a836db59362c029b99f48ccea92281ecdf3703f90197fba6c8d9",
+        "measuredSizeMeters": [0.8, 0.5, 0.45],
+        "yawDegrees": -90,
+        "min": [-0.4, 0.0, -0.225],
+        "max": [0.4, 0.5, 0.225]
+      },
+      "indexTopology": {
+        "boundaryEdges": 6895,
+        "edgesSharedByMoreThanTwoTriangles": 0,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_fa50cabc-9e79-4548-8c2e-1720f6d677c8",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": [
+          "docs/kimi/verification/new-props/computer-set-v1-front.png",
+          "docs/kimi/verification/new-props/computer-set-v1-side.png",
+          "docs/kimi/verification/new-props/computer-set-v1-back.png",
+          "docs/kimi/verification/new-props/computer-set-v1-perspective.png"
+        ]
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "cake-v1",
+      "taskId": "e4f324ba-0e45-45fe-ad58-7af65aad38d0",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "candidate",
+      "productionRecommendation": "暂不进入正式场景",
+      "reviewConclusion": "候选：生成结果含需求外薄餐盘；尺寸与运行加载可复核，但不记为规格完全通过。",
+      "targetSizeMeters": [0.6, 0.4, 0.6],
+      "triangles": 5281,
+      "source": {
+        "path": "assets/source/tripo/cake-v1/v1/tripo-out/cake-v1-e4f324ba/model.glb",
+        "bytes": 493352,
+        "sha256": "26ddd1ab8b514eb8d3e1af510d09291ff461a4ed73bafe59d3232272c4aaa43d",
+        "sizeMeters": [1.0, 0.3913894593715668, 1.0]
+      },
+      "runtime": {
+        "path": "public/assets/tripo/cake-v1.glb",
+        "bytes": 493708,
+        "sha256": "aec1a49273d20dae0a80c4c3e891f5f0370284a8f5d29287a248428723ca1325",
+        "measuredSizeMeters": [0.6, 0.4, 0.6],
+        "yawDegrees": 0,
+        "min": [-0.3, 0.0, -0.3],
+        "max": [0.3, 0.4, 0.3]
+      },
+      "indexTopology": {
+        "boundaryEdges": 2976,
+        "edgesSharedByMoreThanTwoTriangles": 1,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_e4f324ba-0e45-45fe-ad58-7af65aad38d0",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": [
+          "docs/kimi/verification/new-props/cake-v1-front.png",
+          "docs/kimi/verification/new-props/cake-v1-side.png",
+          "docs/kimi/verification/new-props/cake-v1-back.png",
+          "docs/kimi/verification/new-props/cake-v1-perspective.png"
+        ]
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "box-v1",
+      "taskId": "66999eb5-7a1c-472f-918c-0a9bb1358fbe",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "independent-review-passed",
+      "productionRecommendation": "可由Codex按实测包络接入",
+      "reviewConclusion": "封口纸箱与纸胶带可读，无印刷文字；四视角未见明显变形或悬空，通过独立视觉复核。",
+      "targetSizeMeters": [0.55, 0.55, 0.55],
+      "triangles": 4254,
+      "source": {
+        "path": "assets/source/tripo/box-v1/v1/tripo-out/box-v1-66999eb5/model.glb",
+        "bytes": 607616,
+        "sha256": "e89f95ebb682c68938b437bd504abf4ec7ed5d9198e6571e7e720dd137781e9f",
+        "sizeMeters": [1.0, 0.7592954933643341, 0.9041095972061157]
+      },
+      "runtime": {
+        "path": "public/assets/tripo/box-v1.glb",
+        "bytes": 607980,
+        "sha256": "e66c1f7668aaddf2c7385b93502896157d7a5533363f2c7e96e242851e706105",
+        "measuredSizeMeters": [0.55, 0.55, 0.55],
+        "yawDegrees": 0,
+        "min": [-0.275, 0.0, -0.275],
+        "max": [0.275, 0.55, 0.275]
+      },
+      "indexTopology": {
+        "boundaryEdges": 4256,
+        "edgesSharedByMoreThanTwoTriangles": 0,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_66999eb5-7a1c-472f-918c-0a9bb1358fbe",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": [
+          "docs/kimi/verification/new-props/box-v1-front.png",
+          "docs/kimi/verification/new-props/box-v1-side.png",
+          "docs/kimi/verification/new-props/box-v1-back.png",
+          "docs/kimi/verification/new-props/box-v1-perspective.png"
+        ]
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "clock-station-v1",
+      "taskId": "1f2530e2-b765-4589-85e3-276e5edf5e45",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "independent-review-passed",
+      "productionRecommendation": "可由Codex按实测包络接入",
+      "reviewConclusion": "落地打卡机的空白屏幕与刷卡区朝向+Z；四视角未见明显变形或悬空，通过独立视觉复核。",
+      "targetSizeMeters": [0.5, 1.23, 0.36],
+      "triangles": 3827,
+      "source": {
+        "path": "assets/source/tripo/clock-station-v1/v1/tripo-out/clock-station-v1-1f2530e2/model.glb",
+        "bytes": 569788,
+        "sha256": "9b6bce0947a912f11bf77a4af40313805e0f1656d4bd8d9d95d9454c5c7b7f46",
+        "sizeMeters": [0.27201566100120544, 1.0, 0.2681017816066742]
+      },
+      "runtime": {
+        "path": "public/assets/tripo/clock-station-v1.glb",
+        "bytes": 570220,
+        "sha256": "e779f28d0d10a346a3e4175ae4d5b80c4950ab2ae1e3388e49db3dab60dc2e8e",
+        "measuredSizeMeters": [0.5, 1.23, 0.36],
+        "yawDegrees": -90,
+        "min": [-0.25, 0.0, -0.18],
+        "max": [0.25, 1.23, 0.18]
+      },
+      "indexTopology": {
+        "boundaryEdges": 3421,
+        "edgesSharedByMoreThanTwoTriangles": 0,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_1f2530e2-b765-4589-85e3-276e5edf5e45",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": [
+          "docs/kimi/verification/new-props/clock-station-v1-front.png",
+          "docs/kimi/verification/new-props/clock-station-v1-side.png",
+          "docs/kimi/verification/new-props/clock-station-v1-back.png",
+          "docs/kimi/verification/new-props/clock-station-v1-perspective.png"
+        ]
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "exit-door-v1",
+      "taskId": "b5028184-0238-4b8a-85b2-71cb79634926",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "not-adopted",
+      "productionRecommendation": "不导出运行版，不接入",
+      "reviewConclusion": "不采用：源模型缺少指定的上方空白标牌包络，不符合门组件需求；未导出运行GLB。",
+      "targetSizeMeters": [2.18, 2.28, 0.12],
+      "triangles": 4922,
+      "source": {
+        "path": "assets/source/tripo/exit-door-v1/v1/tripo-out/exit-door-v1-b5028184/model.glb",
+        "bytes": 560116,
+        "sha256": "b352abb2eba70a8a6e8301a838d993ae9aad39a8f00f6ed0f988bbb4b3e90161",
+        "sizeMeters": [0.25244617462158203, 1.0, 0.679060697555542]
+      },
+      "runtime": null,
+      "measuredRuntimeSizeMeters": null,
+      "indexTopology": {
+        "boundaryEdges": 4178,
+        "edgesSharedByMoreThanTwoTriangles": 0,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_b5028184-0238-4b8a-85b2-71cb79634926",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": null,
+        "captures": []
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "printer-v1",
+      "taskId": "690cac68-cc60-4c5c-bca1-104c674943f9",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "not-adopted",
+      "productionRecommendation": "不导出运行版，不接入",
+      "reviewConclusion": "不采用：生成结果实际为落地复印机，不是指定桌面打印机；未导出运行GLB。",
+      "targetSizeMeters": [0.88, 0.48, 0.3],
+      "triangles": 4683,
+      "source": {
+        "path": "assets/source/tripo/printer-v1/v1/tripo-out/printer-v1-690cac68/model.glb",
+        "bytes": 1029648,
+        "sha256": "3dd692a0be49849b9ef199061e87efb7c35743b4bd9055c06dfa0f4c367a10b7",
+        "sizeMeters": [0.7397260367870331, 1.0, 0.6829745769500732]
+      },
+      "runtime": null,
+      "measuredRuntimeSizeMeters": null,
+      "indexTopology": {
+        "boundaryEdges": 6732,
+        "edgesSharedByMoreThanTwoTriangles": 3,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_690cac68-cc60-4c5c-bca1-104c674943f9",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": null,
+        "captures": []
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "plant-v1",
+      "taskId": "e4940563-2a98-4ff2-b9ed-16b3c3fc4c94",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "independent-review-passed",
+      "productionRecommendation": "可由Codex按实测包络接入",
+      "reviewConclusion": "窄轮廓盆栽符合0.34米宽深限制；四视角未见明显变形或悬空，通过独立视觉复核。",
+      "targetSizeMeters": [0.34, 1.15, 0.34],
+      "triangles": 4652,
+      "source": {
+        "path": "assets/source/tripo/plant-v1/v1/tripo-out/plant-v1-e4940563/model.glb",
+        "bytes": 636152,
+        "sha256": "fb653164faf79425f5e9e0106ccf324a416acd7e923e3e0c10815f147f339f06",
+        "sizeMeters": [0.3679060637950897, 1.0, 0.4090019464492798]
+      },
+      "runtime": {
+        "path": "public/assets/tripo/plant-v1.glb",
+        "bytes": 636508,
+        "sha256": "e06fcfd3ec4baea3a90a912515fe812f6e9b6f72aa73330f2a842178a15db6ba",
+        "measuredSizeMeters": [0.34, 1.15, 0.34],
+        "yawDegrees": 0,
+        "min": [-0.17, 0.0, -0.17],
+        "max": [0.17, 1.15, 0.17]
+      },
+      "indexTopology": {
+        "boundaryEdges": 5220,
+        "edgesSharedByMoreThanTwoTriangles": 0,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_e4940563-2a98-4ff2-b9ed-16b3c3fc4c94",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": [
+          "docs/kimi/verification/new-props/plant-v1-front.png",
+          "docs/kimi/verification/new-props/plant-v1-side.png",
+          "docs/kimi/verification/new-props/plant-v1-back.png",
+          "docs/kimi/verification/new-props/plant-v1-perspective.png"
+        ]
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    },
+    {
+      "assetId": "storage-shelf-v1",
+      "taskId": "a799d118-ce3b-43c9-b715-319f98a1a724",
+      "creditsConsumed": 30,
+      "modelVersion": "v3.1-20260211",
+      "status": "candidate",
+      "productionRecommendation": "暂不进入正式场景",
+      "reviewConclusion": "候选：档案盒正面已朝向+Z，但源模型是窄单bay；按高度等比例归一后宽深仍不符合2.10×1.82×0.28米目标，未硬拉变形。",
+      "targetSizeMeters": [2.1, 1.82, 0.28],
+      "triangles": 4521,
+      "source": {
+        "path": "assets/source/tripo/storage-shelf-v1/v1/tripo-out/storage-shelf-v1-a799d118/model.glb",
+        "bytes": 801108,
+        "sha256": "0070a64752f5c6c82c1108db44423123e5658b62a7496d852ed46cbc033b7bd7",
+        "sizeMeters": [0.2935420572757721, 0.9980430603027344, 0.34442269802093506]
+      },
+      "runtime": {
+        "path": "public/assets/tripo/storage-shelf-v1.glb",
+        "bytes": 801620,
+        "sha256": "9b88af1194680bef679ce948d0cbdde7d0c085a02daa8322b4d2cc6cc519a33a",
+        "measuredSizeMeters": [0.6280784219951, 1.8199999999999998, 0.5352940824816249],
+        "yawDegrees": -90,
+        "min": [-0.31403921099755, 0.0, -0.26764704124081246],
+        "max": [0.31403921099755, 1.8199999999999998, 0.26764704124081246]
+      },
+      "indexTopology": {
+        "boundaryEdges": 5511,
+        "edgesSharedByMoreThanTwoTriangles": 0,
+        "degenerateTriangles": 0
+      },
+      "textures": [
+        {
+          "name": "Color_a799d118-ce3b-43c9-b715-319f98a1a724",
+          "mimeType": "image/jpeg",
+          "dimensions": [2048, 2048],
+          "embedded": true
+        }
+      ],
+      "previewEvidence": {
+        "sourceContactSheet": "docs/kimi/verification/new-props/source-contact-sheet.jpg",
+        "runtimeContactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": [
+          "docs/kimi/verification/new-props/storage-shelf-v1-front.png",
+          "docs/kimi/verification/new-props/storage-shelf-v1-side.png",
+          "docs/kimi/verification/new-props/storage-shelf-v1-back.png",
+          "docs/kimi/verification/new-props/storage-shelf-v1-perspective.png"
+        ]
+      },
+      "integratedByCodex": false,
+      "gameplayVerified": false
+    }
+  ]
+}

@@ -383,10 +383,10 @@ describe('environment and locomotion safety',()=>{
   });
   it('lowers a restoring desk beneath a player standing on its top instead of lifting it through them',()=>{
     const {world}=fixture();const query=makeWorldQuery(world),state=createGame(world);stand(state);
-    const desk=world.desks[0];state.deskHeights[desk.id]=1.9;state.player.x=desk.x;state.player.z=desk.z;state.player.y=1.981;
+    const desk=world.desks[0];state.deskHeights[desk.id]=1.9;state.player.x=desk.x;state.player.z=desk.z;state.player.y=1.9;
     const restoring={...rule('desk',desk.id),phase:'restoring' as const};state.rules.push(restoring);
-    stepGame(state,idle,.05,world,query);expect(state.deskHeights[desk.id]).toBeLessThan(1.9);expect(state.player.y).toBeLessThanOrEqual(1.981);
-    run(state,world,query,1.5);expect(state.deskHeights[desk.id]).toBeCloseTo(.75);expect(state.player.y).toBeCloseTo(.831,3);
+    stepGame(state,idle,.05,world,query);expect(state.deskHeights[desk.id]).toBeLessThan(1.9);expect(state.player.y).toBeLessThanOrEqual(1.9);
+    run(state,world,query,1.5);expect(state.deskHeights[desk.id]).toBeCloseTo(.75);expect(state.player.y).toBeCloseTo(.75,3);
   });
   it('throttles failed ground and edge route searches instead of retrying them every physics frame',()=>{
     const {state,world,query}=fixture();stand(state);state.player.x=10;state.player.z=15;

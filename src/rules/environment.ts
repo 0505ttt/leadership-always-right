@@ -175,7 +175,7 @@ function restoreDesk(state:GameState,rule:ActiveRule,dt:number,world:WorldDef):b
   let minimum=.75;
   const current=state.deskHeights[desk.id]??.75;
   const under=(point:Vec2)=>Math.abs(point.x-desk.x)<1.1&&Math.abs(point.z-desk.z)<.73;
-  if(under(state.player)&&state.player.y<current+.04)minimum=Math.max(minimum,playerHeight(state)+state.player.y+.16);
+  if(under(state.player)&&state.player.y<current-.01)minimum=Math.max(minimum,playerHeight(state)+state.player.y+.16);
   if(under(state.boss))minimum=Math.max(minimum,1.96);
   const next=Math.max(Math.min(current,minimum),current-(1.9-.75)*dt/.8);
   state.deskHeights[desk.id]=next<=.751?.75:next;

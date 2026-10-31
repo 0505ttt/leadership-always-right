@@ -4,6 +4,8 @@ export type Ending = 'escaped' | 'overtime' | 'fired';
 export type RuleKind = 'cake' | 'desk' | 'pot' | 'return' | 'flow' | 'transparent' | 'pressure';
 export type Pose = 'standing' | 'crouching' | 'working' | 'rolling' | 'dragged';
 export interface Rect { x: number; z: number; w: number; d: number }
+/** World-space AABB of a static visual solid, extending from ground level to height. */
+export interface StaticDecorationCollider extends Rect { id: string; roomId: number; height: number }
 export interface Wall extends Rect { id: string; height: number; roomId: number; transparent?: boolean; partition?: boolean; crawl?: boolean }
 export interface Room extends Rect { id: number; name: string; kind: string; lit: boolean; permanentLight: boolean; switch: Vec2 & {wallId?:string;yaw?:number}; pressure: boolean }
 export interface Door extends Vec2 { id: string; a: number; b: number; axis: 'x' | 'z'; width: number; crawl?: boolean }
@@ -12,7 +14,7 @@ export interface Station extends Vec2 { id: string; roomId: number; yaw: number 
 export interface Exit extends Station { outward: Vec2 }
 export interface Prop extends Vec2 { id: string; kind: 'box' | 'cake'; roomId: number }
 export interface ColleagueDef extends Vec2 { id: string; name: string; deskId: string; roomId: number; yaw: number; pot: boolean }
-export interface WorldDef { seed: number; rooms: Room[]; walls: Wall[]; doors: Door[]; desks: Desk[]; stations: Station[]; exits: Exit[]; props: Prop[]; colleagues: ColleagueDef[]; spawn: Vec2; bossSpawn: Vec2; patrol: Vec2[]; width: number; depth: number; validation: string[] }
+export interface WorldDef { seed: number; rooms: Room[]; walls: Wall[]; doors: Door[]; desks: Desk[]; stations: Station[]; exits: Exit[]; props: Prop[]; colleagues: ColleagueDef[]; spawn: Vec2; bossSpawn: Vec2; patrol: Vec2[]; width: number; depth: number; validation: string[]; decorationColliders?: StaticDecorationCollider[] }
 export interface Player extends Vec2 { y: number; vy: number; yaw: number; pose: Pose; sticky: boolean; stamina: number; potId: string | null; holding: string | null; potInHand: boolean; protection: number; crouchIntent: boolean; moving: boolean; sprinting: boolean }
 export interface Boss extends Vec2 { yaw: number; mode: 'patrol' | 'warning' | 'chase' | 'search' | 'drag' | 'leave'; lastSeen: Vec2 | null; evidenceUntil: number; evidenceId: string | null; seenFor: number; contactFor: number; searchFor: number; path: Vec2[]; patrolIndex: number }
 export interface Pot { id: string; owner: string; phase: 'attached' | 'drawing' | 'held' | 'flying' | 'returning' | 'attaching'; cooldown: number; progress: number; from: Vec2; to: Vec2; targetId: string | null }

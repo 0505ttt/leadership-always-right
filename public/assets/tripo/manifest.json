@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "source": "Kimi first-batch runtime assets plus the retained earlier Codex employee candidate. Complete visual delivery remains in progress.",
+  "version": 3,
+  "source": "Kimi-selected formal characters and visual components, retained original employee asset, and four Kimi-approved new props. Runtime integration is separate from full gameplay and visual acceptance.",
   "assets": {
     "employee-base-v1": {
       "url": "assets/tripo/employee-base-v1.glb",
@@ -18,9 +18,9 @@
       "rotationYRadians": -1.5707963267948966,
       "origin": "feet center",
       "clips": [
-        "idle",
         "walk",
-        "run"
+        "run",
+        "idle"
       ],
       "clipDurations": {
         "idle": 15.375,
@@ -50,25 +50,41 @@
         "91356210-b394-4a55-97d6-40f972adfc93"
       ],
       "credits": 95,
-      "integrationStatus": "retained candidate; awaiting Kimi selection; not integrated into the game"
+      "integrationStatus": "instantiated in the main game through Kimi formal components; complete public acceptance tracked separately",
+      "sha256": "252c285bc81c62d11962e0b1059432a9d99fb910252aec5bc257abd2e17ca8f9",
+      "generationOwner": "Codex (retained earlier asset)",
+      "visualSelectionOwner": "Kimi"
     },
     "leader-v1": {
       "generationOwner": "Kimi",
       "url": "assets/tripo/leader-v1.glb",
-      "bytes": 2855700,
-      "sha256": "282393132879b268a9c8cd3001cd83f37e8d61dba7e2c52c876b350dc77563fb",
-      "triangles": 11632,
-      "textureSize": [2048, 2048],
-      "sizeMeters": [1.800, 1.850, 0.373],
+      "bytes": 3807556,
+      "sha256": "f492513df087a2e6f8300f7703dd99080521f083cdb3d381c5d4bda0b7f1fc26",
+      "triangles": 11620,
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        1.8,
+        1.85,
+        0.373
+      ],
       "up": "+Y",
       "forward": "+Z",
       "origin": "bottom center",
       "alreadyNormalized": true,
-      "skinJoints": 0,
-      "clips": [],
-      "taskIds": ["07c93937-226a-4136-97f4-5e695404d9da"],
+      "skinJoints": 65,
+      "clips": [
+        "idle",
+        "run",
+        "walk"
+      ],
+      "taskIds": [
+        "07c93937-226a-4136-97f4-5e695404d9da"
+      ],
       "credits": null,
-      "integrationStatus": "static T-pose inspection asset; not used as the in-game leader; awaiting Kimi rig and animation"
+      "integrationStatus": "instantiated in the main game through Kimi formal components; complete public acceptance tracked separately"
     },
     "pot-v1": {
       "generationOwner": "Kimi",
@@ -76,17 +92,26 @@
       "bytes": 2398416,
       "sha256": "ad2da9f9753c2a94afa0e776a761b393a77d7d9c13b71b52addcd07f44818a01",
       "triangles": 3656,
-      "textureSize": [2048, 2048],
-      "sizeMeters": [0.450, 0.196, 0.353],
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        0.45,
+        0.196,
+        0.353
+      ],
       "up": "+Y",
       "forward": "+Z",
       "origin": "bottom center",
       "alreadyNormalized": true,
       "skinJoints": 0,
       "clips": [],
-      "taskIds": ["a3b71fea-e22d-4a58-adbf-a3e0105e9950"],
+      "taskIds": [
+        "a3b71fea-e22d-4a58-adbf-a3e0105e9950"
+      ],
       "credits": null,
-      "integrationStatus": "loaded as independent game prop; final character anchors and combined pose await Kimi"
+      "integrationStatus": "instantiated in the main game through Kimi formal components; complete public acceptance tracked separately"
     },
     "chair-v1": {
       "generationOwner": "Kimi",
@@ -94,17 +119,134 @@
       "bytes": 4140944,
       "sha256": "add8d12b3a3bac79d1c5ff4e2c5a84db804db1a0612cf65812f43ea05e38d215",
       "triangles": 7360,
-      "textureSize": [2048, 2048],
-      "sizeMeters": [0.749, 1.100, 0.725],
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        0.749,
+        1.1,
+        0.725
+      ],
       "up": "+Y",
       "forward": "+Z",
       "origin": "bottom center",
       "alreadyNormalized": true,
       "skinJoints": 0,
       "clips": [],
-      "taskIds": ["c61a6271-eddd-465c-bcd4-d27089ff08f2"],
+      "taskIds": [
+        "c61a6271-eddd-465c-bcd4-d27089ff08f2"
+      ],
       "credits": null,
-      "integrationStatus": "loaded as independent chair; final character seating and animation await Kimi"
+      "integrationStatus": "instantiated in the main game through Kimi formal components; complete public acceptance tracked separately"
+    },
+    "computer-set-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/computer-set-v1.glb",
+      "bytes": 885264,
+      "sha256": "6c27560c9016a836db59362c029b99f48ccea92281ecdf3703f90197fba6c8d9",
+      "triangles": 5681,
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        0.8,
+        0.5,
+        0.45
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": [
+        "fa50cabc-9e79-4548-8c2e-1720f6d677c8"
+      ],
+      "credits": 30,
+      "integrationStatus": "instantiated in the main game; complete public acceptance tracked separately"
+    },
+    "box-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/box-v1.glb",
+      "bytes": 607980,
+      "sha256": "e66c1f7668aaddf2c7385b93502896157d7a5533363f2c7e96e242851e706105",
+      "triangles": 4254,
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": [
+        "66999eb5-7a1c-472f-918c-0a9bb1358fbe"
+      ],
+      "credits": 30,
+      "integrationStatus": "instantiated in the main game; complete public acceptance tracked separately"
+    },
+    "clock-station-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/clock-station-v1.glb",
+      "bytes": 570220,
+      "sha256": "e779f28d0d10a346a3e4175ae4d5b80c4950ab2ae1e3388e49db3dab60dc2e8e",
+      "triangles": 3827,
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        0.5,
+        1.23,
+        0.36
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": [
+        "1f2530e2-b765-4589-85e3-276e5edf5e45"
+      ],
+      "credits": 30,
+      "integrationStatus": "instantiated in the main game; complete public acceptance tracked separately"
+    },
+    "plant-v1": {
+      "generationOwner": "Kimi",
+      "url": "assets/tripo/plant-v1.glb",
+      "bytes": 636508,
+      "sha256": "e06fcfd3ec4baea3a90a912515fe812f6e9b6f72aa73330f2a842178a15db6ba",
+      "triangles": 4652,
+      "textureSize": [
+        2048,
+        2048
+      ],
+      "sizeMeters": [
+        0.34,
+        1.15,
+        0.34
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom center",
+      "alreadyNormalized": true,
+      "skinJoints": 0,
+      "clips": [],
+      "taskIds": [
+        "e4940563-2a98-4ff2-b9ed-16b3c3fc4c94"
+      ],
+      "credits": 30,
+      "integrationStatus": "instantiated in the main game; complete public acceptance tracked separately"
     }
   }
 }

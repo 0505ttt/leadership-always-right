@@ -95,16 +95,18 @@ export function generateWorld(seed:number):WorldDef {
   ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`cake-${index}`,kind:'cake' as const,roomId:room.id,...local(room.id,6.8,11.8)})),
   ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`box-${index}`,kind:'box' as const,roomId:room.id,...local(room.id,2.6,6)})),
  ]:[{id:'cake-0',kind:'cake' as const,roomId:2,x:26.4,z:10.8},{id:'cake-1',kind:'cake' as const,roomId:7,x:26.6,z:26},{id:'box-0',kind:'box' as const,roomId:7,x:21.5,z:30},{id:'box-1',kind:'box' as const,roomId:4,x:41,z:8}];
- const bossSpawn=layout?local(rooms.find(r=>r.kind==='boss')!.id,7,8):{x:6,z:26};
- const workStops=rooms.filter(room=>room.kind==='work').map(room=>{
+ const workStops=rooms.filter(room=>room.kind==='work').sort((a,b)=>Number(b.id===layout?.home)-Number(a.id===layout?.home)).map(room=>{
   const desk=desks.find(item=>item.roomId===room.id&&!item.home)!;
   return {x:desk.x+(desk.x<room.x?1.8:-1.8),z:desk.seat.z};
  });
- const clockStops=stations.map(station=>({x:station.x+Math.sin(station.yaw)*.95,z:station.z+Math.cos(station.yaw)*.95}));
+ // Inspect from the operating side, clear of the physical machine behind the station anchor.
+ const clockStops=stations.map(station=>({x:station.x-Math.sin(station.yaw)*.95,z:station.z-Math.cos(station.yaw)*.95}));
  const exitStops=exits.map(exit=>({x:exit.x-exit.outward.x*.95,z:exit.z-exit.outward.z*.95}));
- // Known fixed inspection locations, independent of the player's live position.
- // Start inside the leader's own room, then alternate public objectives and desks.
- const patrol=layout?[{...bossSpawn},clockStops[0],workStops[0],exitStops[0],clockStops[1],workStops[1],exitStops[1],workStops[2]]:[{x:5,z:26},{x:15,z:23},{x:25,z:26},{x:35,z:32},{x:45,z:31},{x:45,z:8},{x:33,z:7},{x:24,z:7},{x:14,z:6},{x:5,z:6}];
+ // The shift ends during a public-area inspection, not always in the private
+ // office. This seeded schedule uses only fixed workplaces and objectives.
+ const firstClock=layout?Math.floor(variation()*2):0,otherClock=1-firstClock;
+ const bossSpawn=layout?{...clockStops[firstClock]}:{x:6,z:26};
+ const patrol=layout?[clockStops[firstClock],exitStops[firstClock],clockStops[otherClock],exitStops[otherClock],workStops[0],workStops[1],workStops[2]]:[{x:5,z:26},{x:15,z:23},{x:25,z:26},{x:35,z:32},{x:45,z:31},{x:45,z:8},{x:33,z:7},{x:24,z:7},{x:14,z:6},{x:5,z:6}];
  const world:WorldDef={seed,rooms,walls,doors,desks,stations,exits,props,colleagues,spawn:{...desks[0].seat},bossSpawn,patrol,width:48,depth:36,validation:[]};
  // Reflection varies exterior walls/route direction without changing legal dimensions or topology.
  const mirrorX=random()>.5,mirrorZ=random()>.5;
