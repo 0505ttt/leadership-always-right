@@ -161,7 +161,8 @@ async function start(): Promise<void> {
       for (const yaw of [primary.yaw, primary.yaw + Math.PI / 2, primary.yaw + Math.PI, primary.yaw - Math.PI / 2]) {
         const normal = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
         const position = target.clone().addScaledVector(normal, room.kind === 'meeting' ? 5.2 : 4.4); position.y = 1.62;
-        if (Math.abs(position.x - room.x) < room.w / 2 - .35 && Math.abs(position.z - room.z) < room.d / 2 - .35 && clearPartitionView(position, target)) return { position, target };
+        const nearPartition = world.walls.some(wall => wall.partition && Math.abs(position.x - wall.x) < wall.w / 2 + .75 && Math.abs(position.z - wall.z) < wall.d / 2 + .75);
+        if (!nearPartition && Math.abs(position.x - room.x) < room.w / 2 - .9 && Math.abs(position.z - room.z) < room.d / 2 - .9 && clearPartitionView(position, target)) return { position, target };
       }
     }
     const door = world.doors.find(item => item.a === room.id || item.b === room.id);
