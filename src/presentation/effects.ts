@@ -103,7 +103,12 @@ export function createOfficeEffects(world: WorldDef, bindings: OfficeEffectBindi
       for (const room of world.rooms) {
         const lit = room.permanentLight || !!state.lights[room.id];
         const light = bindings.roomLights.get(room.id);
-        if (light) light.intensity = lit ? 19 : .35;
+        if (light) {
+          light.intensity = lit ? 19 : .35;
+          // Three.js already cuts illumination at light.distance. Do not pay
+          // the per-pixel lighting cost for sources outside that same sphere.
+          light.visible = Math.hypot(state.player.x - light.position.x, state.player.y - light.position.y, state.player.z - light.position.z) <= light.distance;
+        }
         const indicator = bindings.switchIndicators.get(room.id);
         if (indicator) indicator.color.set(lit ? 0xa8edb6 : 0xc27b4d);
         if (lightValues.get(room.id) !== lit) {
