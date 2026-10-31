@@ -91,19 +91,19 @@ async function start(): Promise<void> {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.13;
+  renderer.toneMappingExposure = 1.03;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x28352f);
   scene.fog = new THREE.Fog(0x28352f, 34, 74);
   const camera = new THREE.PerspectiveCamera(53, window.innerWidth / window.innerHeight, .045, 110);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = .12; controls.minDistance = .45; controls.maxDistance = 24; controls.maxPolarAngle = Math.PI * .51;
-  scene.add(new THREE.HemisphereLight(0xd5dfd2, 0x42493d, 1.35));
-  const daylight = new THREE.DirectionalLight(0xffe6b9, 2.15); daylight.position.set(-16, 29, 12); daylight.castShadow = true;
+  scene.add(new THREE.HemisphereLight(0xd8e0dc, 0x42493d, 1.2));
+  const daylight = new THREE.DirectionalLight(0xffe9c9, 1.9); daylight.position.set(-16, 29, 12); daylight.castShadow = true;
   daylight.shadow.mapSize.set(2048, 2048); daylight.shadow.camera.left = -29; daylight.shadow.camera.right = 29; daylight.shadow.camera.top = 25; daylight.shadow.camera.bottom = -25; daylight.shadow.camera.far = 70; daylight.shadow.bias = -.0004;
   scene.add(daylight);
   for (const room of world.rooms) {
-    const light = new THREE.PointLight(room.kind === 'boss' ? 0xffd89c : 0xffe8c5, 15, 14, 2);
+    const light = new THREE.PointLight(room.kind === 'boss' ? 0xffdca8 : 0xffe9cf, 13, 14, 2);
     light.position.set(room.x, 2.5, room.z); scene.add(light);
   }
   const shell = previewShell(scene);
@@ -324,9 +324,10 @@ async function start(): Promise<void> {
       const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
       let meshes = 0, triangles = 0;
       decorations.root.traverse(object => {
-        if (!(object instanceof THREE.Mesh)) return;
-        meshes++; geometries.add(object.geometry);
-        triangles += (object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0) / 3;
+        if (!(object instanceof THREE.Mesh) || !object.visible) return;
+        const instances = object instanceof THREE.InstancedMesh ? object.count : 1;
+        meshes += instances; geometries.add(object.geometry);
+        triangles += (object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0) / 3 * instances;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
           materials.add(material);
           for (const value of Object.values(material)) if (value instanceof THREE.Texture) textures.add(value);
@@ -339,7 +340,8 @@ async function start(): Promise<void> {
     getRendererInfo: () => {
       const textures = new Set<THREE.Texture>(); let meshes = 0;
       scene.traverse(object => {
-        if (!(object instanceof THREE.Mesh)) return; meshes++;
+        if (!(object instanceof THREE.Mesh) || !object.visible) return;
+        meshes += object instanceof THREE.InstancedMesh ? object.count : 1;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) for (const value of Object.values(material)) if (value instanceof THREE.Texture) textures.add(value);
       });
       let textureBytes = 0;

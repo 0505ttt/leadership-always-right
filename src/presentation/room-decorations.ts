@@ -377,7 +377,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     addModel(side, 'plant-v1', [0, .52, 0]);
     placeAssembly(room, `front-waiting:${room.id}`, [
       { id: 'bench', object: kit.bench(1.35), spec: { w: 1.35, d: .58, h: .86, note: '双座等候凳；入口侧保留绕行与起身空间。' }, offset: { x: 0, z: 0 } },
-      { id: 'side', object: side, spec: { w: .58, d: .48, h: 1.35, note: '等候边桌与既有绿植。' }, offset: { x: 1.1, z: -.05 } },
+      { id: 'side', object: side, spec: { w: .58, d: .48, h: .52, note: '等候边桌与既有绿植；柜体碰撞，绿植仅视觉。' }, offset: { x: 1.1, z: -.05 } },
       { id: 'rug', object: kit.rug(2.55, 1.65), spec: { w: 2.55, d: 1.65, h: .014, visualOnly: true, note: '等候区薄地毯，纯视觉。' }, offset: { x: .42, z: .08 } },
     ], { x: room.x + 1.4, z: room.z + 1.6 });
   }
@@ -404,7 +404,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     const media = kit.cabinet(1.65, .5, .68, 2);
     if (!room.pressure) addModel(media, 'plant-v1', [.48, .72, 0]);
     parts.push(
-      { id: 'media', object: media, spec: { w: 1.65, d: .5, h: room.pressure ? .75 : 1.95, note: '低媒体柜与既有绿植；不作为中央隔断。' }, offset: { x: 0, z: -2.05 } },
+      { id: 'media', object: media, spec: { w: 1.65, d: .5, h: .75, note: '低媒体柜与既有绿植；柜体碰撞，绿植仅视觉。' }, offset: { x: 0, z: -2.05 } },
       { id: 'rug', object: kit.rug(5.25, 3.35), spec: { w: 5.25, d: 3.35, h: .014, visualOnly: true, note: '会议组薄地毯，纯视觉。' }, offset: { x: 0, z: .05 } },
     );
     placeAssembly(room, `meeting-set:${room.id}`, parts, { x: room.x - .3, z: room.z + 1.2 });
