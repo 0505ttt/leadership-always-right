@@ -146,11 +146,13 @@ export function createCharacterMotion(visual: CharacterVisual, options: Characte
   let handTargets: Record<'left' | 'right', THREE.Vector3> | null = null;
   let transitionProgress = 1;
   let leaderMode: LeaderMotionMode | null = null;
+  let leaderMoving: boolean | null = null;
   let leaderPhase: number | null = null;
   let leaderLastTime: number | null = null;
   let leaderBlendStarted = 0;
   let leaderBlendDuration = .14;
   let leaderBlendFrom: Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }> | null = null;
+  let leaderPoseRootFrom: THREE.Vector3 | null = null;
 
   function captureBones(): Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }> {
     return new Map(Object.entries(visual.bones).map(([name, bone]) => [name, {
@@ -196,12 +198,16 @@ export function createCharacterMotion(visual: CharacterVisual, options: Characte
     leaderLastTime = input.time;
     if (leaderPhase === null) leaderPhase = input.time;
     else leaderPhase += dt * cadence;
-    if (leaderMode !== mode) {
+    if (leaderMode !== mode || leaderMoving !== moving) {
+      // Search keeps its semantic mode at route pauses. Blend run/idle changes too,
+      // so a stationary checkpoint cannot snap the feet to a different clip in one frame.
       leaderBlendFrom = leaderMode === null ? null : captureBones();
+      leaderPoseRootFrom = leaderMode === null ? null : visual.poseRoot.position.clone();
       leaderBlendStarted = input.time;
       leaderBlendDuration = mode === 'inspect' || mode === 'alert' ? .18 : .14;
       transitionProgress = leaderMode === null ? 1 : 0;
       leaderMode = mode;
+      leaderMoving = moving;
     }
     activity = searching ? 'leader-search' : mode === 'inspect' || mode === 'alert' ? 'leader-inspect' : 'leader-patrol';
     visual.update({
@@ -221,6 +227,11 @@ export function createCharacterMotion(visual: CharacterVisual, options: Characte
         bone.quaternion.slerpQuaternions(previous.quaternion, quaternion, alpha);
         bone.scale.lerpVectors(previous.scale, scale, alpha);
       }
+      if (leaderPoseRootFrom) visual.poseRoot.position.lerpVectors(leaderPoseRootFrom, visual.poseRoot.position.clone(), alpha);
+      // Blending bones and root offsets can briefly lift or sink the skin. Restore
+      // the same visual ground contract used by the inherited locomotion path.
+      const groundOffset = visual.measure().body.min[1];
+      if (Number.isFinite(groundOffset)) visual.poseRoot.position.y -= groundOffset;
       if (transitionProgress >= 1) leaderBlendFrom = null;
       visual.root.updateMatrixWorld(true);
     }
@@ -253,8 +264,10 @@ export function createCharacterMotion(visual: CharacterVisual, options: Characte
     requestedLookYaw = appliedLookYaw = 0;
     footTargets = handTargets = null;
     leaderMode = null;
+    leaderMoving = null;
     leaderPhase = leaderLastTime = null;
     leaderBlendFrom = null;
+    leaderPoseRootFrom = null;
   }
 
   function update(input: CharacterMotionInput): void {
@@ -264,8 +277,10 @@ export function createCharacterMotion(visual: CharacterVisual, options: Characte
     }
     if (visual.kind === 'leader') {
       leaderMode = null;
+      leaderMoving = null;
       leaderPhase = leaderLastTime = null;
       leaderBlendFrom = null;
+      leaderPoseRootFrom = null;
       transitionProgress = 1;
     }
     const elevated = input.workStance === 'chair-standing' && input.pose === 'working';

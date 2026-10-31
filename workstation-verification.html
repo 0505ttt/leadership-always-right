@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#202720">
+    <link rel="icon" href="data:,">
+    <title>领导说的都是真的 · 真实工位联合验收</title>
+    <style>
+      html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#202720;color:#e6ddc7;font:14px system-ui,sans-serif}#scene{position:fixed;inset:0}.panel{position:fixed;left:22px;top:22px;max-width:430px;padding:16px 18px;background:#202720e8;border:1px solid #e4b96f66;pointer-events:none}.panel p{margin:5px 0;line-height:1.55}.panel small{color:#b9c1af}.toolbar{position:fixed;left:22px;bottom:22px;display:flex;gap:8px;flex-wrap:wrap}.toolbar button{border:1px solid #e4b96f88;background:#263329;color:#e6ddc7;padding:9px 13px;cursor:pointer}.toolbar button:hover{background:#e4b96f;color:#202720}.toolbar .views{position:fixed;right:22px;bottom:22px}.error{color:#ffb39d;white-space:pre-wrap}
+    </style>
+  </head>
+  <body>
+    <div id="scene"></div>
+    <section class="panel"><strong>真实工位联合验收</strong><p id="status">正在加载正式场景与模型…</p><small>复用生产 OfficeScene 与真实 E docking。受控固定步长，不是自然整局或 FPS 验收。</small><p id="metrics"></p></section>
+    <div class="toolbar">
+      <button data-stage="mount">上椅中段</button><button data-stage="work">稳定办公</button><button data-stage="dismount">离椅</button><button data-stage="reseat">再次上椅</button>
+    </div>
+    <div class="toolbar views"><button data-view="production">生产镜头</button><button data-view="front">手部</button><button data-view="side">侧面</button><button data-view="perspective">三分之四</button></div>
+    <script type="module" src="/src/presentation/workstation-verification.ts"></script>
+  </body>
+</html>

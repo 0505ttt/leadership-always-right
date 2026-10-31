@@ -1,4 +1,5 @@
 import { TouchInputState, type TouchAction } from './touch-state';
+import { touchActionGroups } from './touch-actions';
 import './touch-controls.css';
 
 const actions: readonly { action: TouchAction; label: string; help: string }[] = [
@@ -12,6 +13,10 @@ const actions: readonly { action: TouchAction; label: string; help: string }[] =
   { action: 'drop', label: '放下', help: '放下手中物品' },
   { action: 'computer', label: '电脑', help: '打开附近电脑' },
 ];
+const actionButton = (action: TouchAction) => {
+  const item = actions.find(candidate => candidate.action === action)!;
+  return `<button type="button" data-touch-action="${item.action}" aria-label="${item.help}">${item.label}</button>`;
+};
 
 export interface TouchControls {
   setEnabled(enabled: boolean): void;
@@ -24,8 +29,10 @@ export function createTouchControls(canvas: HTMLCanvasElement, state: TouchInput
   const root = document.createElement('div');
   root.className = 'touch-controls';root.hidden = true;
   root.setAttribute('aria-label', '触控操作');
-  root.innerHTML = `<div class="touch-toolbar"><button type="button" data-touch-menu="pause" aria-label="暂停游戏">暂停</button><button type="button" data-touch-menu="phone" aria-label="查看规则记录">规则</button></div><div class="touch-stick" role="group" aria-label="移动摇杆"><span class="touch-stick__label">移动</span><span class="touch-stick__knob" aria-hidden="true"></span></div><span class="touch-look-hint" aria-hidden="true">右侧空白处滑动观察</span><div class="touch-actions">${actions.map(({action,label,help}) => `<button type="button" data-touch-action="${action}" aria-label="${help}">${label}</button>`).join('')}</div>`;
+  root.innerHTML = `<div class="touch-toolbar"><button type="button" data-touch-menu="pause" aria-label="暂停游戏">暂停</button><button type="button" data-touch-menu="phone" aria-label="查看规则记录">规则</button></div><div class="touch-stick" role="group" aria-label="移动摇杆"><span class="touch-stick__label">移动</span><span class="touch-stick__knob" aria-hidden="true"></span></div><span class="touch-look-hint" aria-hidden="true">右侧空白处滑动观察</span><div class="touch-actions"><div class="touch-actions__more" hidden>${touchActionGroups.secondary.map(actionButton).join('')}</div><div class="touch-actions__primary">${touchActionGroups.primary.map(actionButton).join('')}<button type="button" data-touch-menu="actions" aria-label="展开更多动作" aria-expanded="false">动作</button></div></div>`;
   document.body.append(root);
+  const moreActions = root.querySelector<HTMLElement>('.touch-actions__more')!;
+  const actionsToggle = root.querySelector<HTMLButtonElement>('[data-touch-menu="actions"]')!;
   const stick = root.querySelector<HTMLElement>('.touch-stick')!;
   const knob = root.querySelector<HTMLElement>('.touch-stick__knob')!;
   const captures = new Map<number, HTMLElement>();
@@ -58,6 +65,17 @@ export function createTouchControls(canvas: HTMLCanvasElement, state: TouchInput
     for (const id of [...captures.keys()]) release(id);
     display();
   };
+  const handleMenu = (menu: string) => {
+    if (menu === 'actions') {
+      const expanded = moreActions.hidden;
+      moreActions.hidden = !expanded;
+      actionsToggle.textContent = expanded ? '收起' : '动作';
+      actionsToggle.setAttribute('aria-expanded', String(expanded));
+      actionsToggle.setAttribute('aria-label', expanded ? '收起更多动作' : '展开更多动作');
+      return;
+    }
+    clear();menu === 'pause' ? callbacks.pause() : callbacks.phone();
+  };
   const onStick = (event: PointerEvent) => {
     if (!enabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
     const rect = stick.getBoundingClientRect();
@@ -71,7 +89,7 @@ export function createTouchControls(canvas: HTMLCanvasElement, state: TouchInput
     if (!target) return;
     event.preventDefault();event.stopPropagation();
     const menu = target.dataset.touchMenu;
-    if (menu) { clear();menu==='pause'?callbacks.pause():callbacks.phone();return; }
+    if (menu) { handleMenu(menu); return; }
     const action = target.dataset.touchAction as TouchAction;
     if (state.startAction(event.pointerId, action)) capture(event,target);
   }) as EventListener);
@@ -80,7 +98,7 @@ export function createTouchControls(canvas: HTMLCanvasElement, state: TouchInput
     if (!enabled || event.detail !== 0) return;
     const button = (event.target as Element).closest<HTMLButtonElement>('button');if (!button) return;
     const menu = button.dataset.touchMenu;
-    if (menu) { clear();menu==='pause'?callbacks.pause():callbacks.phone();return; }
+    if (menu) { handleMenu(menu); return; }
     const action = button.dataset.touchAction as TouchAction;
     if (state.startAction(-1,action)) state.release(-1);
   }) as EventListener);

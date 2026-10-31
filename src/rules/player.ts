@@ -1,6 +1,7 @@
 import type { GameState, InputFrame, Interaction, Vec2, WorldDef, WorldQuery } from '../contracts/game';
 import { announceMessage, clamp, copyPoint, distance, explicitAction, flowFactor, forward, leaveWorkstation, logEvent, playerHeight, runtimeFor, setWorkingStance } from './runtime';
 import { dropHeld } from './objects';
+import { safePropPlacement } from './prop-safety';
 import { deskWorkingPoint } from '../world/workstations';
 
 export function litAt(state: GameState, point: Vec2, query: WorldQuery): boolean {
@@ -173,13 +174,9 @@ export function updateInteraction(state:GameState,input:InputFrame,dt:number,wor
       const length=Math.hypot(direction.x,direction.z);direction.x/=length;direction.z/=length;
     }
     const next={x:prop.x+direction.x*1.5*dt,z:prop.z+direction.z*1.5*dt};
-    const home=world.desks.find(d=>d.home)?.seat??world.spawn;
-    const oldHeld=prop.held;prop.held=true;
-    const valid=distance(next,home)>1.9&&!world.doors.some(d=>distance(d,next)<1.65)&&!world.exits.some(e=>distance(e,next)<2)
-      &&query.validPlacement(next,.9,state)&&distance(next,state.boss)>1.25&&!state.colleagues.some(c=>distance(c,next)<1.25);
-    prop.held=oldHeld;
+    const valid=safePropPlacement(state,world,query,prop,next,prop.scale,true);
     if(valid){prop.x=next.x;prop.z=next.z;prop.roomId=query.roomAt(prop)?.id??prop.roomId;}
-    else announceMessage(state,'大饼不能堵住门、椅位或挤住人。',1);
+    else announceMessage(state,'大饼不能堵住门、椅位、必要通路或挤住人。',1);
     return;
   }
   if(player.moving||Math.hypot(input.moveX,input.moveZ)>.05){cancelInteraction(state);return;}

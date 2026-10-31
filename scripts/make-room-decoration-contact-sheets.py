@@ -1,9 +1,11 @@
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import json
+import os
 
 root = Path(__file__).resolve().parent.parent
-source = root / "docs/kimi/verification/room-decorations"
+output_name = os.environ.get("ROOM_DECORATIONS_OUT", "room-decorations")
+source = root / "docs/kimi/verification" / output_name
 files = sorted(source.glob("room-*.png"))
 if len(files) != 50:
     raise RuntimeError(f"Expected 50 source captures, found {len(files)}")

@@ -7,7 +7,7 @@ import { RuntimeAssets } from '../src/gameplay/assets';
 import { makeWorldQuery } from '../src/world/query';
 import { validateWorld } from '../src/world/validate';
 import { physicalBounds } from '../src/gameplay/physical-bounds';
-import { deskWorkingPoint } from '../src/world/workstations';
+import { deskWorkingPoint, validateWorkstationAccess } from '../src/world/workstations';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { CharacterLibrary, CharacterVisual } from '../src/presentation/characters';
 
@@ -221,6 +221,13 @@ it.each([618,42,1030,20261031])('keeps mandatory routes usable after registering
  expect(world.decorationColliders.length).toBeGreaterThan(0);
  const validation=validateWorld(world,createGame(world),makeWorldQuery(world));
  expect(validation.failures).toEqual([]);expect(validation.valid).toBe(true);
+});
+
+it.each([1,2,3,42,2026,99999])('keeps all 21 workstation approaches and raised-chair docks usable after furniture assembly for seed %i',seed=>{
+ const world=generateWorld(seed),scene=loadedScene(seed),state=createGame(world);
+ world.decorationColliders=scene.getDecorationColliders();
+ expect(world.decorationColliders.length).toBeGreaterThan(0);
+ expect(validateWorkstationAccess(world,state,makeWorldQuery(world))).toEqual([]);
 });
 
 it('keeps an upward camera ray in front of the formal doorway header',()=>{

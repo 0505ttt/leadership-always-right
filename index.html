@@ -1,1 +1,143 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" href="data:,"><meta name="theme-color" content="#172722"><title>领导说的都是真的 · 18:00下班计划</title><meta name="description" content="单人第三人称办公室规则怪谈。先打卡，再想办法下班。屁股不能离开椅子，轮子可以。"></head><body><div id="scene"></div><div id="ui"></div><script type="module" src="/src/main.ts"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <link rel="icon" href="data:,">
+    <meta name="theme-color" content="#fafaf8">
+    <meta name="description" content="《领导说的都是真的》单人第三人称办公室规则怪谈。先打卡，再想办法下班。">
+    <title>领导说的都是真的 · 18:00 离岗现场</title>
+  </head>
+  <body class="entry-open">
+    <div id="scene"></div>
+    <div id="entry-root" hidden>
+      <div id="entry" class="entry-app" data-phase="loading">
+        <header class="entry-mast">
+          <a class="company" href="#" data-action="home" aria-label="甩锅有限公司首页">
+            <span class="company__seal" aria-hidden="true">甩</span>
+            <span><strong>甩锅有限公司</strong><small>AFTER HOURS / 18:00</small></span>
+          </a>
+          <p class="mast-notice">员工内部通告 <span>·</span> NO. 1800</p>
+          <nav class="mast-actions" aria-label="界面工具">
+            <button type="button" class="text-control" data-action="motion" aria-pressed="false">暂停动效</button>
+            <button type="button" class="text-control" data-action="settings">设置</button>
+          </nav>
+        </header>
+
+        <main class="entry-shell" aria-label="游戏入口">
+          <section class="entry-stage" aria-label="18:00 离岗现场">
+            <div class="stage-guides" aria-hidden="true"></div>
+            <div class="stage-register"><span>REALITY NOTICE</span><span>FORM / 18:00</span></div>
+            <figure class="entry-line-field" tabindex="0" aria-label="18:00 量化线场。触摸、移动指针或聚焦可查看数值亮区。">
+              <canvas aria-hidden="true"></canvas>
+              <figcaption class="sr-only">18:00 量化线场</figcaption>
+              <span class="office-loader__field-status field-status">触摸或聚焦，查看线场</span>
+            </figure>
+            <div class="stage-quote">
+              <span class="quote-index">领导指示 / 001</span>
+              <blockquote>今天谁也不许下班。</blockquote>
+              <span class="quote-result">现实已被修改</span>
+            </div>
+            <img class="stage-scene" src="assets/entry/entry-scene.webp" alt="一本正经的领导站在升高的办公桌旁，实体锅悬在半空，员工连人带椅向出口撤离。" draggable="false">
+            <div class="stage-annotation" aria-hidden="true"><span>工位：移动中</span><i></i><small>员工与办公椅仍可撤离</small></div>
+            <div class="stage-bottom">
+              <span class="stage-coordinates">X 18:00&nbsp;&nbsp;/&nbsp;&nbsp;Y EXIT</span>
+              <button type="button" class="field-source" data-action="source">线场说明 ↗</button>
+            </div>
+          </section>
+
+          <section class="entry-content">
+            <div class="home-view" data-view="home" hidden>
+              <p class="eyebrow">离岗通知 <span>/</span> 单人第三人称规则怪谈</p>
+              <h1>领导说的<br>都是真的<span class="title-dot">。</span></h1>
+              <p class="home-intro">18:00，领导的话开始改变现实。<br>桌子会升高，饼会膨胀，工位也可能长脚。<br>你要做的只有一件事：<strong>下班。</strong></p>
+              <div class="home-actions">
+                <button type="button" class="button button--primary" data-action="start"><span>开始上班</span><span aria-hidden="true">↗</span></button>
+                <button type="button" class="button button--secondary" data-action="tutorial">查看离岗手册</button>
+              </div>
+              <div class="home-secondary">
+                <button type="button" class="plain-button" data-action="multiplayer">多人游戏 <span>入口</span></button>
+                <button type="button" class="plain-button" data-action="credits">制作说明</button>
+              </div>
+              <div class="home-meta"><span>资源已就绪 · 开始即玩</span><span>每局最多 10 分钟</span><span>无需听觉</span></div>
+            </div>
+
+            <div class="loading-view" data-view="loading">
+              <p class="eyebrow">离岗准备 <span>/</span> LIVE RESOURCE STATUS</p>
+              <h2>办公室正在<br>按新规则重组<span class="title-dot">。</span></h2>
+              <div class="resource-summary" aria-live="polite">
+                <div class="resource-current"><span data-loading-label>下载本局资源</span><strong data-loading-count>0 / 16 件资源</strong></div>
+                <p data-loading-detail>等待真实加载器提供状态。</p>
+                <div class="resource-track" role="progressbar" aria-label="资源准备进度" aria-valuemin="0" aria-valuemax="16" aria-valuenow="0"><i data-progress-fill></i></div>
+                <small data-byte-count>按实际资源件数报告，不显示估算百分比</small>
+              </div>
+              <ol class="resource-steps" aria-label="准备阶段">
+                <li data-step="download"><span>01</span><strong>下载资源</strong><small>模型与本地文件</small></li>
+                <li data-step="parse"><span>02</span><strong>解析与纹理</strong><small>模型、动作、纹理</small></li>
+                <li data-step="audio"><span>03</span><strong>音频准备</strong><small>等待真实用户启用</small></li>
+                <li data-step="scene"><span>04</span><strong>场景初始化</strong><small>办公室与着色器</small></li>
+                <li data-step="ready"><span>05</span><strong>进入首页</strong><small>准备完成后开放</small></li>
+              </ol>
+              <div class="loading-failures" data-failures hidden></div>
+              <div class="enter-row">
+                <button type="button" class="button button--primary" data-action="enter" disabled><span>等待资源就绪</span><span aria-hidden="true">↗</span></button>
+                <button type="button" class="button button--secondary" data-action="tutorial">操作说明</button>
+              </div>
+              <p class="loading-note">暂停只影响装饰线场，不会中断资源准备。</p>
+            </div>
+          </section>
+        </main>
+        <footer class="entry-footer"><span>领导的话 → 空间规则</span><span>一本正经地工作，千方百计地下班。</span><span>OFFICE / 18:00</span></footer>
+        <div class="entry-toast" role="status" aria-live="polite" hidden></div>
+      </div>
+
+      <dialog class="entry-dialog" data-dialog="settings" aria-labelledby="entry-settings-title">
+        <form method="dialog" class="dialog-frame">
+          <div class="dialog-heading"><p class="eyebrow">个人偏好 / 自动保存</p><button class="dialog-close" value="close" aria-label="关闭设置">关闭</button></div>
+          <h2 id="entry-settings-title">按你的习惯上班。</h2>
+          <label class="setting-row"><span><strong>减弱非必要动效</strong><small>停止线场漂移与界面过渡；不影响资源加载。</small></span><input type="checkbox" data-setting="motion"></label>
+          <label class="setting-row"><span><strong>界面文字大小</strong><small>同步主游戏文字大小；画质、灵敏度与音量可在游戏内设置调整。</small></span><select data-setting="text"><option value="1">标准</option><option value="1.1">较大</option><option value="1.2">最大</option></select></label>
+          <p class="dialog-note">设置仅影响表现与操作，不改变游戏规则。</p>
+        </form>
+      </dialog>
+
+      <dialog class="entry-dialog" data-dialog="tutorial" aria-labelledby="entry-tutorial-title">
+        <div class="dialog-frame">
+          <div class="dialog-heading"><p class="eyebrow">员工离岗手册</p><button class="dialog-close" data-close aria-label="关闭离岗手册">关闭</button></div>
+          <div data-tutorial-content></div>
+          <div class="tutorial-actions"><button type="button" class="button button--secondary" data-tutorial="prev">上一页</button><span data-tutorial-count>01 / 03</span><button type="button" class="button button--primary" data-tutorial="next">下一页</button></div>
+        </div>
+      </dialog>
+
+      <dialog class="entry-dialog" data-dialog="credits" aria-labelledby="entry-credits-title">
+        <form method="dialog" class="dialog-frame">
+          <div class="dialog-heading"><p class="eyebrow">制作说明</p><button class="dialog-close" value="close" aria-label="关闭制作说明">关闭</button></div>
+          <h2 id="entry-credits-title">同一间办公室，<br>同一套离岗体验。</h2>
+          <p>《领导说的都是真的》是一款单人、近第三人称的办公室逃离游戏。职场话术成为真实规则，你需要探索路线、打卡，并与一本正经的领导周旋。</p>
+          <p class="dialog-note">当前为单人版本，不包含联机匹配；豆包聊天为本地预写内容，不依赖运行时 AI 服务。</p>
+        </form>
+      </dialog>
+
+      <dialog class="entry-dialog" data-dialog="multiplayer" aria-labelledby="entry-multiplayer-title">
+        <div class="dialog-frame">
+          <div class="dialog-heading"><p class="eyebrow">多人游戏 / 入口</p><button class="dialog-close" data-close aria-label="关闭多人游戏说明">关闭</button></div>
+          <h2 id="entry-multiplayer-title">下班可以一起，<br>联机还没开门。</h2>
+          <p>多人入口已经预留。当前版本尚未开放联机房间、匹配或网络同步，不会制造正在寻找队友的假象。</p>
+          <p class="dialog-note"><strong>联机尚未开放</strong><br>当前可玩：单人第三人称。返回后可直接开始上班，不会重新加载已就绪的资源。</p>
+        </div>
+      </dialog>
+
+      <dialog class="entry-dialog source-dialog" data-dialog="source" aria-labelledby="entry-source-title">
+        <div class="dialog-frame">
+          <div class="dialog-heading"><p class="eyebrow">量化线场 / 技术说明</p><button class="dialog-close" data-close aria-label="关闭线场说明">关闭</button></div>
+          <h2 id="entry-source-title">制度，也有数值。</h2>
+          <p>18:00 图形仅在创建时完成一次 60×60 亮度采样，每帧绘制 60 列、30 段竖线。扫描框来自发生位移后的亮度区域计算，<strong>不是 AI 识别。</strong></p>
+          <dl class="source-metrics"><div><dt>采样</dt><dd>60 × 60 / 单次</dd></div><div><dt>线段</dt><dd>60 列 × 30 段</dd></div><div><dt>噪声</dt><dd>固定种子 7319</dd></div></dl>
+          <details><summary>查看原创 18:00 Path2D</summary><pre data-source-path></pre></details>
+        </div>
+      </dialog>
+    </div>
+    <div id="ui"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

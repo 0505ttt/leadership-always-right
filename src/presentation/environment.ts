@@ -42,8 +42,8 @@ interface EnvironmentMaterials {
 
 function palette(pool: VisualResourcePool): EnvironmentMaterials {
   return {
-    trim: pool.material({ color: 0xc4c8b9, roughness: .82 }),
-    dark: pool.material({ color: 0x303b37, roughness: .72, metalness: .12 }),
+    trim: pool.material({ color: 0xeeeeeb, roughness: .82 }),
+    dark: pool.material({ color: 0x111212, roughness: .72, metalness: .12 }),
     metal: pool.material({ color: 0x747d77, roughness: .45, metalness: .62 }),
     wood: pool.material({ color: 0xa78962, roughness: .72, metalness: .02 }),
     cabinet: pool.material({ color: 0x879087, roughness: .83 }),
@@ -202,18 +202,18 @@ function dressRoom(parent: THREE.Object3D, pool: VisualResourcePool, m: Environm
   const candidates = world.walls.filter(wall => wall.roomId === room.id && !wall.partition && !wall.crawl && Math.max(wall.w, wall.d) > 1.6)
     .sort((a, b) => Math.max(b.w, b.d) - Math.max(a.w, a.d));
   if (!candidates.length) return;
-  mountedLabel(parent, pool, candidates[0], room, room.name, { y: 2.18, width: 2.25, height: .42, foreground: '#ece9d7', background: '#31483e', accent: '#c49a5d' });
+  mountedLabel(parent, pool, candidates[0], room, room.name, { y: 2.18, width: 2.25, height: .42, foreground: '#fafaf8', background: '#2152e7', accent: '#111212' });
   const slogans: Record<string, string[]> = {
-    work: ['闭环不是圈', '是把椅子推回原位'], meeting: ['会议纪要已生成', '结论仍在对齐'], front: ['甩锅有限公司', '18:00  仍在奋斗'],
-    tea: ['茶水间禁止谈下班', '除非已经打卡'], boss: ['我说的话', '就是物理事实'], storage: ['旧愿景封存处', '领用请登记'],
-    admin: ['流程已经简化', '只剩最后七步'], print: ['纸张会卡', '责任不会'],
+    work: ['先打卡', '再离场'], meeting: ['会议纪要已生成', '结论仍在对齐'], front: ['领导的话', '就是空间规则'],
+    tea: ['茶水间禁止谈下班', '除非已经打卡'], boss: ['领导说的', '都是真的'], storage: ['旧愿景封存处', '领用请登记'],
+    admin: ['离岗通行单', '核对每一项手续'], print: ['纸张会卡', '责任不会'],
   };
   const lines = slogans[room.kind] ?? slogans.work;
-  if (candidates[1]) mountedLabel(parent, pool, candidates[1], room, lines.join('\n'), { y: 1.55, width: 1.5, height: .7, foreground: '#494b40', background: '#d9d4bd', accent: '#a25f4d', lines });
-  if (candidates[2]) mountedLabel(parent, pool, candidates[2], room, '本周之星\n空缺 · 等待自愿者', { y: 1.35, width: 1.15, height: .72, foreground: '#4c4b3f', background: '#cfbd8e', lines: ['本周之星', '空缺 · 等待自愿者'] });
+  if (candidates[1]) mountedLabel(parent, pool, candidates[1], room, lines.join('\n'), { y: 1.55, width: 1.5, height: .7, foreground: '#111212', background: '#fafaf8', accent: '#2152e7', lines });
+  if (candidates[2]) mountedLabel(parent, pool, candidates[2], room, '离岗登记\n18:00 · 本人确认', { y: 1.35, width: 1.15, height: .72, foreground: '#111212', background: '#eeeeeb', accent: '#2152e7', lines: ['离岗登记', '18:00 · 本人确认'] });
   roomFixture(parent, pool, m, room, candidates[0], colliders);
   if (room.kind === 'front') {
-    mountedLabel(parent, pool, candidates[0], room, '18:00', { y: 1.63, width: .85, height: .85, foreground: '#e7e1c9', background: '#2e3f37', accent: '#c59b5f' });
+    mountedLabel(parent, pool, candidates[0], room, '18:00', { y: 1.63, width: .85, height: .85, foreground: '#fafaf8', background: '#2152e7', accent: '#111212' });
   }
 }
 
@@ -247,7 +247,7 @@ export function createOfficeEnvironment(world: WorldDef, options: { lighting?: b
 
   for (const room of world.rooms) {
     addBox(root, pool, track(room.id, floorMaterial(pool, room)), [room.w, .1, room.d], [room.x, -.055, room.z]);
-    const wallBase = track(room.id, pool.material({ color: room.kind === 'boss' ? 0xb9b09b : 0xc4c9b8, roughness: .94 }));
+    const wallBase = track(room.id, pool.material({ color: room.kind === 'boss' ? 0xc8c6bf : 0xd9dad5, roughness: .94 }));
     for (const wall of world.walls.filter(item => item.roomId === room.id)) {
       const material = track(room.id, wallBase.clone());
       pool.own(material);

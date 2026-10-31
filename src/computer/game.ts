@@ -50,7 +50,7 @@ export function commandComputer(state:GameState,command:ComputerCommand):void {
 }
 /** Call only with foreground wall-clock delta. A suspended tab must not catch up. */
 export function advanceComputer(state:GameState,dt:number):void {
- const c=state.computer;if(!c||!Number.isFinite(dt)||dt<=0||dt>1)return;
+ const c=state.computer;if(!c||!Number.isFinite(dt)||dt<=0)return;
  const oldHour=Math.floor((state.companySeconds??0)/COMPANY_HOUR_SECONDS);
  state.companySeconds=(state.companySeconds??0)+dt;c.elapsed+=dt;
  if(Math.floor(state.companySeconds/COMPANY_HOUR_SECONDS)>oldHour)logEvent(state,'computer:company-hour');

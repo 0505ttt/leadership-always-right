@@ -321,12 +321,14 @@ export function createCharacterRig(options: {
       activeClip = name;
     }
     mixer.setTime(.35 + time * (name === 'run' ? 1.1 : 1));
+    // Clear the old visual offset before sampling the current frame's hips.
+    // Codex still owns every authoritative position and velocity.
+    poseRoot.position.x = 0;
+    poseRoot.position.z = 0;
     root.updateMatrixWorld(true);
-    // Remove root motion and sideways drift in the visual layer only. Codex
-    // owns the authoritative position and velocity of the actor.
     const hips = toLocal(root, bones.Hips.getWorldPosition(new THREE.Vector3()));
-    poseRoot.position.x -= hips.x;
-    poseRoot.position.z -= hips.z;
+    poseRoot.position.x = -hips.x;
+    poseRoot.position.z = -hips.z;
     poseRoot.position.y -= localBounds(root, poseRoot).min.y;
     root.updateMatrixWorld(true);
   }

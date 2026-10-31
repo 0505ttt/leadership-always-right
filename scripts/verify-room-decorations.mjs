@@ -6,10 +6,52 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const output = path.join(root, 'docs/kimi/verification/room-decorations');
+const seed = Number(process.env.ROOM_DECORATIONS_SEED ?? '42');
+const outputName = process.env.ROOM_DECORATIONS_OUT ?? 'room-decorations';
+const output = path.join(root, 'docs/kimi/verification', outputName);
 const port = 5192;
-const base = `http://127.0.0.1:${port}/leadership-always-right/room-decoration-preview.html`;
+const base = `http://127.0.0.1:${port}/leadership-always-right/room-decoration-preview.html?seed=${seed}`;
 const checksOnly = process.argv.includes('--checks-only');
+function overlaps(a, b) {
+  return Math.abs(a.x - b.x) < (a.w + b.w) / 2 - .0001 && Math.abs(a.z - b.z) < (a.d + b.d) / 2 - .0001;
+}
+function reservations(world) {
+  return [
+    ...world.desks.flatMap(desk => {
+      const workPoint = desk.workPoint ?? desk.seat;
+      return [
+        { id: `${desk.id}:seat`, x: desk.seat.x, z: desk.seat.z, w: .82, d: .86 },
+        { id: `${desk.id}:workPoint`, x: workPoint.x, z: workPoint.z, w: .82, d: .86 },
+        {
+          id: `${desk.id}:docking`,
+          x: (desk.seat.x + workPoint.x) / 2,
+          z: (desk.seat.z + workPoint.z) / 2,
+          w: Math.abs(desk.seat.x - workPoint.x) + .82,
+          d: Math.abs(desk.seat.z - workPoint.z) + .86,
+        },
+      ];
+    }),
+    ...world.colleagues.map(person => ({ id: `colleague:${person.id}`, x: person.x, z: person.z, w: .76, d: .76 })),
+    ...world.rooms.map(room => ({
+      id: `switch:${room.id}`,
+      x: room.switch.x + Math.sin(room.switch.yaw ?? 0) * .65,
+      z: room.switch.z + Math.cos(room.switch.yaw ?? 0) * .65,
+      w: .85, d: .85,
+    })),
+    ...world.patrol.map((point, index) => ({ id: `patrol:${index}`, x: point.x, z: point.z, w: .85, d: .85 })),
+    ...world.props.filter(prop => prop.kind === 'cake').map(prop => ({ id: `${prop.id}:max`, x: prop.x, z: prop.z, w: 1.8, d: 1.8 })),
+  ];
+}
+function safetyFailures(world, colliders) {
+  const reserved = reservations(world);
+  const failures = [];
+  for (const collider of colliders) {
+    for (const reservation of reserved) if (overlaps(collider, reservation)) failures.push({ colliderId: collider.id, reservationId: reservation.id });
+    const room = world.rooms.find(item => item.id === collider.roomId);
+    if (room?.pressure && collider.height > 1.5) failures.push({ colliderId: collider.id, reservationId: `pressure-height:${room.id}`, actualHeight: collider.height });
+  }
+  return failures;
+}
 await mkdir(output, { recursive: true });
 const portIsOpen = () => new Promise(resolve => {
   const socket = createConnection({ host: '127.0.0.1', port });
@@ -40,7 +82,7 @@ process.on('exit', () => {
 });
 const report = {
   scope: '正式房间装饰模块的独立浏览器预览；不是 Codex 主场景、完整玩法或硬件帧率验收',
-  seed: 618,
+  seed,
   url: base,
   additionalTripoCreditsConsumed: 0,
   captures: [], roomRenderInfo: {}, errors: [], warnings: [], failures: [],
@@ -78,6 +120,21 @@ try {
   const initialDiagnostics = await page.evaluate(() => window.__ROOM_DECORATIONS__.getDiagnostics());
   report.diagnostics = initialDiagnostics;
   report.decorationResources = await page.evaluate(() => window.__ROOM_DECORATIONS__.getDecorationResourceInfo());
+  const currentWorld = await page.evaluate(() => window.__ROOM_DECORATIONS__.getWorld());
+  report.safetyViolations = safetyFailures(currentWorld, initialDiagnostics.colliders);
+  if (report.safetyViolations.length) report.failures.push(`Safety reservations intersect: ${report.safetyViolations.map(item => `${item.colliderId}/${item.reservationId}`).join(', ')}`);
+  const pressureProbe = await page.evaluate(async () => {
+    const { generateWorld } = await import('/leadership-always-right/src/world/generate.ts');
+    const { createRoomDecorations } = await import('/leadership-always-right/src/presentation/room-decorations.ts');
+    const world = generateWorld(42);
+    for (const room of world.rooms) room.pressure = room.kind === 'storage';
+    const decorations = createRoomDecorations(world);
+    const result = { world, colliders: decorations.getDiagnostics().colliders };
+    decorations.dispose();
+    return result;
+  });
+  report.pressureProbeViolations = safetyFailures(pressureProbe.world, pressureProbe.colliders);
+  if (report.pressureProbeViolations.length) report.failures.push(`Low-pressure probe contains over-height furniture: ${report.pressureProbeViolations.map(item => `${item.colliderId}/${item.actualHeight}`).join(', ')}`);
   if (initialDiagnostics.missingModels.length) report.failures.push(`Missing models: ${initialDiagnostics.missingModels.join(', ')}`);
   if (initialDiagnostics.violations.length) report.failures.push(...initialDiagnostics.violations);
   for (const room of initialDiagnostics.rooms) {
@@ -193,6 +250,8 @@ try {
         });
         results.push({
           seed,
+          world,
+          colliders: diagnostics.colliders,
           roomOrder: world.rooms.map(room => ({ id: room.id, name: room.name, kind: room.kind })),
           roomChecks,
           violations: diagnostics.violations,
@@ -205,6 +264,8 @@ try {
     return results;
   }, [618, 1, 2, 3, 4, 5, 42, 2026]);
   for (const audit of report.seedAudits) {
+    audit.safetyViolations = safetyFailures(audit.world, audit.colliders);
+    if (audit.safetyViolations.length) report.failures.push(`Seed ${audit.seed} safety reservations intersect: ${audit.safetyViolations.map(item => `${item.colliderId}/${item.reservationId}`).join(', ')}`);
     if (audit.violations.length) report.failures.push(`Seed ${audit.seed}: ${audit.violations.join('; ')}`);
     for (const room of audit.roomChecks) {
       if (!room.roomNameSign || !room.identitySign) report.failures.push(`Seed ${audit.seed} room ${room.roomId} lacks name/identity sign.`);

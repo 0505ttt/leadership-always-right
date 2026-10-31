@@ -205,4 +205,17 @@ describe('one physical inspection, bounded search and counterplay',()=>{
     const before=f.state.player.x;updatePlayer(f.state,{...idle,moveZ:1,yaw:Math.PI/2},.1,f.world,f.query);
     expect(f.state.player.x).toBeGreaterThan(before);
   });
+
+  it('ends inspection pursuit at the fixed deadline even while the player stays visible but uncaught',()=>{
+    const f=fixture();
+    Object.assign(f.state.player,{x:37,z:21,pose:'standing',workstationId:null,protection:100});
+    beginInspection(f.state,rule(f),f.world,f.query);
+    Object.assign(f.state.inspection!,{phase:'search',searchUntil:f.state.elapsed+1});
+    Object.assign(f.state.boss,{x:36,z:20,yaw:0,mode:'chase'});
+    f.state.rules=[];
+    steps(f,5);
+    expect(f.state.catches).toBe(0);
+    expect(f.state.inspection).toBeNull();
+    expect(f.state.boss.mode).not.toBe('chase');
+  });
 });

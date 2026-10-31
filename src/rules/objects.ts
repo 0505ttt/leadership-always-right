@@ -1,5 +1,6 @@
 import type { GameState, InputFrame, Pot, PropState, Vec2, WorldDef, WorldQuery } from '../contracts/game';
 import { announceMessage, clamp, copyPoint, distance, explicitAction, forward, lerp, logEvent, runtimeFor } from './runtime';
+import { safePropPlacement } from './prop-safety';
 
 type FlyingProp = PropState & { y?: number };
 
@@ -72,36 +73,41 @@ function clearOfActors(state:GameState,point:Vec2,radius:number):boolean {
   return [state.player,state.boss,...state.colleagues].every(actor=>distance(actor,point)>radius+.32);
 }
 
-function safeRestPoint(state:GameState,world:WorldDef,query:WorldQuery,point:Vec2,radius:number):boolean {
-  const home=world.desks.find(desk=>desk.home)?.seat??world.spawn;
-  return distance(point,home)>=1.45
-    &&!world.doors.some(door=>distance(point,door)<1.3)
-    &&!world.exits.some(exit=>distance(point,exit)<1.6)
-    &&clearOfActors(state,point,radius)&&query.validPlacement(point,radius,state);
+function safeRestPoint(state:GameState,world:WorldDef,query:WorldQuery,point:Vec2,prop:PropState,routes:boolean):boolean {
+  // Preserve the established actor margin and add the exact final-square and
+  // route checks; the new adapter must not quietly weaken the older clearance.
+  return clearOfActors(state,point,propRadius(prop))
+    && safePropPlacement(state,world,query,prop,point,prop.scale,routes);
 }
 
 function nearbyLanding(state:GameState,world:WorldDef,query:WorldQuery,origin:Vec2,prop:PropState):Vec2|null {
   const radius=propRadius(prop),height=prop.kind==='box'?.55:.4*prop.scale;
+  let routeChecks=0;
   // A landing is independent of the player's current facing. Check all sides,
   // within a small bounded radius, without moving the prop across a wall.
   for(const offset of [0,.4,.8,1.2,1.6])for(let index=0;index<(offset?16:1);index++) {
     const angle=index*Math.PI/8,delta={x:Math.sin(angle)*offset,z:Math.cos(angle)*offset};
     const candidate={x:origin.x+delta.x,z:origin.z+delta.z};
-    if(!safeRestPoint(state,world,query,candidate,radius)||!query.lineOfSight(origin,candidate,.6,state,'solid'))continue;
-    if(distance(query.move(origin,delta,radius,height,state),candidate)<.001)return candidate;
+    if(!safeRestPoint(state,world,query,candidate,prop,false)||!query.lineOfSight(origin,candidate,.6,state,'solid'))continue;
+    if(distance(query.move(origin,delta,radius,height,state),candidate)>=.001)continue;
+    if(++routeChecks>4)return null;
+    if(safeRestPoint(state,world,query,candidate,prop,true))return candidate;
   }
   return null;
 }
 
 export function legalDrop(state: GameState, world: WorldDef, query: WorldQuery, origin:Vec2 = state.player, item?:PropState): Vec2 | null {
   const prop=item??state.props.find(candidate=>candidate.id===state.player.holding);
-  const radius=prop?propRadius(prop):.35;
+  if(!prop)return null;
   const direction = forward(state.player.yaw);
   const right = {x:direction.z,z:-direction.x};
+  let routeChecks=0;
   for (const length of [0.9, 1.25, 1.6]) {
     for (const offset of [0, 0.65, -0.65, 1, -1]) {
       const candidate = {x:origin.x + direction.x * length + right.x * offset,z:origin.z + direction.z * length + right.z * offset};
-      if (safeRestPoint(state,world,query,candidate,radius) && query.lineOfSight(origin,candidate,0.6,state,'solid')) return candidate;
+      if(!safeRestPoint(state,world,query,candidate,prop,false)||!query.lineOfSight(origin,candidate,.6,state,'solid'))continue;
+      if(++routeChecks>4)return null;
+      if(safeRestPoint(state,world,query,candidate,prop,true))return candidate;
     }
   }
   return null;
@@ -157,12 +163,14 @@ export function handleObjectInput(state: GameState, input: InputFrame, world: Wo
     const direction = forward(player.yaw);
     const from = copyPoint(player);
     let to: Vec2 | null = null;
-    // Reserve a legal resting point before releasing, so an airborne object cannot seal an exit.
+    let routeChecks=0;
+    // Reserve a final-volume legal resting point before releasing. Cheap static
+    // rejection comes first; only four full route certificates may run per throw.
     for (let length=6; length>=0.8; length-=0.2) {
       const candidate = {x:from.x + direction.x * length,z:from.z + direction.z * length};
-      const home = world.desks.find(desk => desk.home)?.seat ?? world.spawn;
-      if (distance(candidate,home)<1.4 || world.doors.some(d=>distance(candidate,d)<1.3) || world.exits.some(e=>distance(candidate,e)<1.6)) continue;
-      if (clearOfActors(state,candidate,propRadius(prop)) && query.lineOfSight(from,candidate,1.1,state,'solid') && query.validPlacement(candidate,propRadius(prop),state)) { to=candidate; break; }
+      if(!safeRestPoint(state,world,query,candidate,prop,false)||!query.lineOfSight(from,candidate,1.1,state,'solid'))continue;
+      if(++routeChecks>4)break;
+      if(safeRestPoint(state,world,query,candidate,prop,true)){to=candidate;break;}
     }
     if (!to) { announceMessage(state,'前方没有安全落点，物件仍在手里。'); return; }
     if (aimActor(state,query)) explicitAction(state,'throw');

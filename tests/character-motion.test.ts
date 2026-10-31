@@ -162,6 +162,22 @@ describe('independent character motion layer', () => {
     }
   });
 
+  it('re-centers walk and run hips from each current frame instead of accumulating root drift', async () => {
+    const library = await fixture();
+    const actor = library.createLeader();
+    const motion = createCharacterMotion(actor);
+    for (const mode of ['patrol', 'search'] as const) {
+      motion.reset();
+      for (const time of [.2, .4, .6, .8, 1]) {
+        motion.update(pose({ leaderMode: mode, moving: true, speed: mode === 'search' ? 7.2 : 2, time }));
+        actor.root.updateMatrixWorld(true);
+        const hips = actor.root.worldToLocal(actor.bones.Hips.getWorldPosition(new THREE.Vector3()));
+        expect(Math.abs(hips.x)).toBeLessThan(1e-6);
+        expect(Math.abs(hips.z)).toBeLessThan(1e-6);
+      }
+    }
+  });
+
   it('blends patrol, stopped inspection and fast search instead of switching poses in one frame', async () => {
     const library = await fixture();
     const actor = library.createLeader();
@@ -177,6 +193,26 @@ describe('independent character motion layer', () => {
     expect(motion.getDiagnostics().activity).toBe('leader-search');
     expect(motion.getDiagnostics().transitionProgress).toBeLessThan(1);
     motion.update(pose({ leaderMode: 'search', moving: true, speed: 7.2, time: .4 }));
+    expect(motion.getDiagnostics().transitionProgress).toBe(1);
+    expect(motion.getDiagnostics().cadence).toBeCloseTo(1.5, 8);
+  });
+
+  it('blends search route pauses and resumes without changing the semantic search mode', async () => {
+    const library = await fixture();
+    const actor = library.createLeader();
+    const motion = createCharacterMotion(actor);
+    motion.update(pose({ leaderMode: 'search', moving: true, speed: 7.2, time: 0 }));
+    motion.update(pose({ leaderMode: 'search', moving: true, speed: 7.2, time: .2 }));
+    expect(motion.getDiagnostics().transitionProgress).toBe(1);
+    motion.update(pose({ leaderMode: 'search', moving: false, speed: 0, time: .21 }));
+    expect(motion.getDiagnostics().activity).toBe('leader-search');
+    expect(motion.getDiagnostics().transitionProgress).toBeLessThan(1);
+    motion.update(pose({ leaderMode: 'search', moving: false, speed: 0, time: .35 }));
+    expect(motion.getDiagnostics().transitionProgress).toBeCloseTo(1, 8);
+    motion.update(pose({ leaderMode: 'search', moving: true, speed: 7.2, time: .36 }));
+    expect(motion.getDiagnostics().activity).toBe('leader-search');
+    expect(motion.getDiagnostics().transitionProgress).toBeLessThan(1);
+    motion.update(pose({ leaderMode: 'search', moving: true, speed: 7.2, time: .55 }));
     expect(motion.getDiagnostics().transitionProgress).toBe(1);
     expect(motion.getDiagnostics().cadence).toBeCloseTo(1.5, 8);
   });

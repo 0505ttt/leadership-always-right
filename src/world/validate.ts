@@ -10,6 +10,11 @@ export interface MapValidation {
  routes:number;
 }
 
+/** Production rounds never substitute the sparse 618 preview for the normal load. */
+export function hasNormalOfficeDensity(world:WorldDef):boolean {
+ return world.rooms.length===10&&world.desks.length===21&&world.colleagues.length===7;
+}
+
 /** Validate the graph and the actual collision routes; crawlways never count as required routes. */
 export function validateWorld(world:WorldDef,state:GameState,query:WorldQuery=makeWorldQuery(world)):MapValidation {
  const failures:string[]=[];

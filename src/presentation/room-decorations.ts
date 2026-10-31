@@ -34,6 +34,7 @@ type Interval = { lo: number; hi: number };
 type WallSide = { wall: Wall; vertical: boolean; normal: Vec2; tangent: Vec2; intervals: Interval[]; yaw: number };
 type Footprint = { x: number; z: number; w: number; d: number; height?: number; id?: string };
 type FloorSpec = { w: number; d: number; h: number; yaw?: number; visualOnly?: boolean; note?: string };
+type PlacementPart = { id: string; object: THREE.Object3D; spec: FloorSpec; offset: Vec2 };
 
 const WORK_COPY: Record<string, { short: string; title: string; lines: string[]; pin: string[] }> = {
   '第二事业部': { short: '第二事业部 · 交付', title: '交付板｜本周验收', lines: ['V2.4  待验收  小周', '客户回执  已收到', '风险：周五仍是周五'], pin: ['文件流转', '先登记，再转身'] },
@@ -54,21 +55,13 @@ function subtract(intervals: Interval[], blocked: Interval): Interval[] {
 function overlaps(a: Footprint, b: Footprint, margin: number): boolean {
   return Math.abs(a.x - b.x) < (a.w + b.w) / 2 + margin && Math.abs(a.z - b.z) < (a.d + b.d) / 2 + margin;
 }
-function segmentHitsRect(a: Vec2, b: Vec2, rect: Footprint): boolean {
-  const minX = rect.x - rect.w / 2, maxX = rect.x + rect.w / 2, minZ = rect.z - rect.d / 2, maxZ = rect.z + rect.d / 2;
-  let lo = 0, hi = 1;
-  const dx = b.x - a.x, dz = b.z - a.z;
-  for (const [origin, delta, min, max] of [[a.x, dx, minX, maxX], [a.z, dz, minZ, maxZ]] as const) {
-    if (Math.abs(delta) < 1e-8) { if (origin < min || origin > max) return false; continue; }
-    const first = (min - origin) / delta, second = (max - origin) / delta;
-    lo = Math.max(lo, Math.min(first, second)); hi = Math.min(hi, Math.max(first, second));
-    if (lo > hi) return false;
-  }
-  return true;
-}
 function dimensions(spec: FloorSpec): { w: number; d: number } {
   const quarter = Math.abs(Math.sin(spec.yaw ?? 0)) > .5;
   return { w: quarter ? spec.d : spec.w, d: quarter ? spec.w : spec.d };
+}
+function rotatedOffset(offset: Vec2, yaw: number): Vec2 {
+  const cos = Math.cos(yaw), sin = Math.sin(yaw);
+  return { x: offset.x * cos + offset.z * sin, z: -offset.x * sin + offset.z * cos };
 }
 
 /** Independent room dressing. World geometry is read-only; all placements are derived from its final coordinates. */
@@ -91,11 +84,29 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
   const wallReservations = new Map<string, Interval[]>();
 
   const baseObstacles: Footprint[] = [
-    ...world.desks.flatMap<Footprint>(desk => [
-      { x: desk.x, z: desk.z, w: 1.72, d: .98, id: desk.id },
-      { x: desk.seat.x, z: desk.seat.z, w: .82, d: .86, id: `${desk.id}:seat` },
-    ]),
-    ...world.props.map<Footprint>(prop => ({ x: prop.x, z: prop.z, w: prop.kind === 'cake' ? 1.5 : .85, d: prop.kind === 'cake' ? 1.5 : .85, id: prop.id })),
+    ...world.desks.flatMap<Footprint>(desk => {
+      const workPoint = desk.workPoint ?? desk.seat;
+      return [
+        { x: desk.x, z: desk.z, w: 1.72, d: .98, id: desk.id },
+        { x: desk.seat.x, z: desk.seat.z, w: .82, d: .86, id: `${desk.id}:seat` },
+        { x: workPoint.x, z: workPoint.z, w: .82, d: .86, id: `${desk.id}:workPoint` },
+        {
+          x: (desk.seat.x + workPoint.x) / 2,
+          z: (desk.seat.z + workPoint.z) / 2,
+          w: Math.abs(desk.seat.x - workPoint.x) + .82,
+          d: Math.abs(desk.seat.z - workPoint.z) + .86,
+          id: `${desk.id}:docking`,
+        },
+      ];
+    }),
+    ...world.colleagues.map<Footprint>(person => ({ x: person.x, z: person.z, w: .76, d: .76, id: `colleague:${person.id}` })),
+    ...world.rooms.map<Footprint>(room => ({
+      x: room.switch.x + Math.sin(room.switch.yaw ?? 0) * .65,
+      z: room.switch.z + Math.cos(room.switch.yaw ?? 0) * .65,
+      w: .85, d: .85, id: `switch-operating:${room.id}`,
+    })),
+    ...world.patrol.map<Footprint>((point, index) => ({ x: point.x, z: point.z, w: .85, d: .85, id: `patrol:${index}` })),
+    ...world.props.map<Footprint>(prop => ({ x: prop.x, z: prop.z, w: prop.kind === 'cake' ? 1.8 : .85, d: prop.kind === 'cake' ? 1.8 : .85, id: prop.id })),
     ...world.stations.flatMap<Footprint>(station => [
       { x: station.x, z: station.z, w: 1.35, d: 1.35, id: station.id },
       { x: station.x + Math.sin(station.yaw) * .55, z: station.z + Math.cos(station.yaw) * .55, w: .75, d: .75, id: `${station.id}:machine` },
@@ -191,18 +202,20 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     return false;
   }
 
+  function rejection(room: Room, candidate: Footprint, extraFloor: Footprint[] = []): string | undefined {
+    if (Math.abs(candidate.x - room.x) + candidate.w / 2 > room.w / 2 - .12 || Math.abs(candidate.z - room.z) + candidate.d / 2 > room.d / 2 - .12) return '超出房间边界';
+    if (room.pressure && (candidate.height ?? 0) > 1.5) return `低顶内实体高度 ${candidate.height?.toFixed(2)}m`;
+    const external = [...baseObstacles, ...floorSolids].find(obstacle => overlaps(candidate, obstacle, .3));
+    if (external) return `与 ${external.id ?? '既有物件'} 净距不足`;
+    const internal = extraFloor.find(obstacle => overlaps(candidate, obstacle, .07));
+    if (internal) return `与组团 ${internal.id ?? '实体'} 间隙不足`;
+    for (const [id, point] of [['spawn', world.spawn], ['bossSpawn', world.bossSpawn]] as const) {
+      if (overlaps(candidate, { x: point.x, z: point.z, w: .75, d: .75 }, .3)) return `与 ${id} 净距不足`;
+    }
+    return undefined;
+  }
   function safe(room: Room, candidate: Footprint, extraFloor: Footprint[] = []): boolean {
-    if (Math.abs(candidate.x - room.x) + candidate.w / 2 > room.w / 2 - .12 || Math.abs(candidate.z - room.z) + candidate.d / 2 > room.d / 2 - .12) return false;
-    const obstacles = [...baseObstacles, ...floorSolids, ...extraFloor];
-    if (obstacles.some(obstacle => overlaps(candidate, obstacle, .26))) return false;
-    const routeRect = { ...candidate, w: candidate.w + 1.5, d: candidate.d + 1.5 };
-    for (let index = 0; index < world.patrol.length; index++) {
-      if (segmentHitsRect(world.patrol[index], world.patrol[(index + 1) % world.patrol.length], routeRect)) return false;
-    }
-    for (const point of [world.spawn, world.bossSpawn]) {
-      if (overlaps(candidate, { x: point.x, z: point.z, w: .75, d: .75 }, .25)) return false;
-    }
-    return true;
+    return rejection(room, candidate, extraFloor) === undefined;
   }
 
   function fitSpec(object: THREE.Object3D, spec: FloorSpec): FloorSpec {
@@ -257,7 +270,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
         for (const along of positions) {
           const size = dimensions({ ...spec, yaw: side.yaw });
           const position = wallPosition(side, along, 0, size.d / 2 + .09);
-          const candidate = { x: position.x, z: position.z, w: size.w, d: size.d };
+          const candidate = { x: position.x, z: position.z, w: size.w, d: size.d, height: spec.h };
           if (!safe(room, candidate)) continue;
           return registerFloor(room, id, object, spec, candidate, side.yaw);
         }
@@ -275,12 +288,44 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     for (const yaw of yaws) {
       const size = dimensions({ ...spec, yaw });
       for (const offset of offsets) {
-        const candidate = { x: preferred.x + offset.x, z: preferred.z + offset.z, ...size };
+        const candidate = { x: preferred.x + offset.x, z: preferred.z + offset.z, ...size, height: spec.h };
         if (safe(room, candidate)) return registerFloor(room, id, object, spec, candidate, yaw);
       }
     }
     skipped.push({ roomId: room.id, id, reason: '开放区域没有满足占地与巡逻净距的落点' });
     return undefined;
+  }
+
+  function placeAssembly(room: Room, id: string, parts: PlacementPart[], preferred: Vec2 = { x: room.x, z: room.z }): THREE.Group[] {
+    const prepared = parts.map(part => ({ ...part, spec: fitSpec(part.object, part.spec) }));
+    const offsets: Vec2[] = [{ x: 0, z: 0 }, { x: 1.5, z: -2 }, { x: -1.5, z: -2 }, { x: 1.8, z: 2.2 }, { x: -1.8, z: 2.2 }, { x: 0, z: -3.4 }, { x: 0, z: 3.4 }];
+    for (let x = -3; x <= 3; x++) for (let z = -6; z <= 6; z++) offsets.push({ x: x * 1.05, z: z * 1.05 });
+    let lastFailure = '未记录冲突';
+    for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      for (const offset of offsets) {
+        const anchor = { x: preferred.x + offset.x, z: preferred.z + offset.z };
+        const placements: { part: PlacementPart; position: Vec2; yaw: number; size: { w: number; d: number } }[] = [];
+        const accepted: Footprint[] = [];
+        let valid = true;
+        for (const part of prepared) {
+          const local = rotatedOffset(part.offset, yaw);
+          const position = { x: anchor.x + local.x, z: anchor.z + local.z };
+          const partYaw = yaw + (part.spec.yaw ?? 0);
+          const size = dimensions({ ...part.spec, yaw: partYaw });
+          const candidate = { x: position.x, z: position.z, ...size, height: part.spec.h, id: `${id}:${part.id}` };
+          const outside = Math.abs(candidate.x - room.x) + candidate.w / 2 > room.w / 2 - .12 || Math.abs(candidate.z - room.z) + candidate.d / 2 > room.d / 2 - .12;
+          if (outside || (!part.spec.visualOnly && !safe(room, candidate, accepted))) {
+            lastFailure = `${part.id}@${position.x.toFixed(2)},${position.z.toFixed(2)}：${outside ? '超出房间边界' : rejection(room, candidate, accepted)}`;
+            valid = false; break;
+          }
+          if (!part.spec.visualOnly) accepted.push(candidate);
+          placements.push({ part, position, yaw: partYaw, size });
+        }
+        if (valid) return placements.map(({ part, position, yaw: partYaw }) => registerFloor(room, `${id}:${part.id}`, part.object, part.spec, position, partYaw));
+      }
+    }
+    skipped.push({ roomId: room.id, id, reason: `组团没有满足完整落点；最后冲突 ${lastFailure}` });
+    return [];
   }
 
   function addModel(parent: THREE.Object3D, id: RoomDecorationModelId, position: readonly [number, number, number], yaw = 0): boolean {
@@ -298,15 +343,15 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
   function roomNameSign(room: Room): void {
     const subtitle = ROOM_LABEL[room.kind] ?? '办公区';
     const lines = room.name === subtitle ? [room.name] : [room.name, subtitle];
-    mount(room, `room-sign:${room.id}`, kit.sign({ text: lines.join('\n'), width: 2.05, height: .43, lines, fontSize: 59, accent: '#d5a45e' }), 2.05, .43, 2.17, 'sign');
+    mount(room, `room-sign:${room.id}`, kit.sign({ text: lines.join('\n'), width: 2.05, height: .43, lines, fontSize: 59, accent: '#2152e7', background: '#2152e7', foreground: '#fafaf8' }), 2.05, .43, 2.17, 'sign');
   }
 
   function front(room: Room): void {
     const company = new THREE.Group();
-    const title = kit.sign({ text: '甩锅有限公司', width: 4.05, height: .72, fontSize: 102, frame: true });
+    const title = kit.sign({ text: '甩锅有限公司', width: 4.05, height: .72, fontSize: 102, frame: true, background: '#fafaf8', foreground: '#111212', accent: '#2152e7' });
     title.position.y = .21;
     company.add(title);
-    const slogan = kit.sign({ text: '把规矩立住，才不烧心', width: 3.35, height: .3, fontSize: 58, frame: false, foreground: '#ddc18a' });
+    const slogan = kit.sign({ text: '把规矩立住，才不烧心', width: 3.35, height: .3, fontSize: 58, frame: false, foreground: '#2152e7', background: '#fafaf8' });
     slogan.position.set(0, -.36, .026);
     company.add(slogan);
     mount(room, `company-sign:${room.id}`, company, 4.05, 1.15, 1.69, 'sign');
@@ -321,23 +366,39 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       const rug = kit.rug(3.35, 1.85); rug.position.set(0, 0, .72); group.add(rug);
     }
     const clock = kit.wallClock(); mount(room, `front-clock:${room.id}`, clock, .54, .54, 1.77, 'material');
+    const side = kit.cabinet(.58, .48, .48, 1);
+    addModel(side, 'plant-v1', [0, .52, 0]);
+    placeAssembly(room, `front-waiting:${room.id}`, [
+      { id: 'bench', object: kit.bench(1.35), spec: { w: 1.35, d: .58, h: .86, note: '双座等候凳；入口侧保留绕行与起身空间。' }, offset: { x: 0, z: 0 } },
+      { id: 'side', object: side, spec: { w: .58, d: .48, h: 1.35, note: '等候边桌与既有绿植。' }, offset: { x: 1.1, z: -.05 } },
+      { id: 'rug', object: kit.rug(2.55, 1.65), spec: { w: 2.55, d: 1.65, h: .014, visualOnly: true, note: '等候区薄地毯，纯视觉。' }, offset: { x: .42, z: .08 } },
+    ], { x: room.x + 1.4, z: room.z + 1.6 });
   }
 
   function meeting(room: Room): void {
-    mount(room, `meeting-agenda:${room.id}`, kit.sign({ text: '今日议程\n1  对齐结论  09:00\n2  复述结论  09:30\n3  记录：仍需对齐', width: 2.7, height: 1.18, lines: ['今日议程', '1  对齐结论  09:00', '2  复述结论  09:30', '记录：仍需对齐'], fontSize: 53, foreground: '#34483e', background: '#dde1d4', frame: true }), 2.7, 1.18, 1.46, 'material');
-    const set = new THREE.Group();
-    set.add(kit.lowTable(2.55, 1.18, .69));
-    for (const x of [-.75, .75]) for (const z of [-.91, .91]) {
-      const stool = kit.stool(); stool.position.set(x, 0, z); stool.rotation.y = z > 0 ? Math.PI : 0; set.add(stool);
+    mount(room, `meeting-agenda:${room.id}`, kit.displayPanel({ text: '今日议程｜从复述到结论\n09:00  输入与确认\n09:30  复述与记录\n10:00  结论：仍需对齐', width: 3.1, height: 1.25, lines: ['今日议程｜从复述到结论', '09:00  输入与确认', '09:30  复述与记录', '10:00  结论：仍需对齐'], fontSize: 54, foreground: '#34483e', background: '#dde1d4', accent: '#c6a065' }), 3.1, 1.25, 1.5, 'material');
+    const table = kit.collaborationTable(3.6, 1.35);
+    for (const x of [-1.05, 1.05]) {
+      addModel(table, 'mug-v1', [x, .695, .32]);
+      addModel(table, 'paper-stack-v1', [x * .7, .695, -.24], x * .06);
     }
-    for (const x of [-1.57, 1.57]) {
-      const stool = kit.stool(); stool.position.set(x, 0, 0); stool.rotation.y = x > 0 ? -Math.PI / 2 : Math.PI / 2; set.add(stool);
+    let seatIndex = 0;
+    const seat = (x: number, z: number, yaw: number): PlacementPart => {
+      const object = kit.stool(); object.rotation.y = yaw;
+      return { id: `seat-${seatIndex++}`, object, spec: { w: .46, d: .47, h: .88, note: '会议单椅；独立碰撞与接近间隙。' }, offset: { x, z } };
+    };
+    const parts: PlacementPart[] = [
+      { id: 'table', object: table, spec: { w: 3.6, d: 1.35, h: .9, note: '3.6米会议桌与桌面材料。' }, offset: { x: 0, z: 0 } },
+    ];
+    for (const x of [-1.15, 0, 1.15]) {
+      parts.push(seat(x, -1.05, 0), seat(x, 1.05, Math.PI));
     }
-    for (const x of [-.7, .7]) {
-      addModel(set, 'mug-v1', [x, .695, .28]);
-      addModel(set, 'paper-stack-v1', [x * .65, .695, -.2], x * .08);
-    }
-    placeOpen(room, `meeting-set:${room.id}`, set, { w: 3.66, d: 2.38, h: .88, note: '六座低会议组合；按整组外轮廓预留通路。' });
+    parts.push(seat(-2.12, 0, Math.PI / 2), seat(2.12, 0, -Math.PI / 2));
+    parts.push(
+      { id: 'media', object: kit.cabinet(1.65, .5, .68, 2), spec: { w: 1.65, d: .5, h: .75, note: '低媒体柜；不作为中央隔断。' }, offset: { x: 0, z: -2.05 } },
+      { id: 'rug', object: kit.rug(5.25, 3.35), spec: { w: 5.25, d: 3.35, h: .014, visualOnly: true, note: '会议组薄地毯，纯视觉。' }, offset: { x: 0, z: .05 } },
+    );
+    placeAssembly(room, `meeting-set:${room.id}`, parts, { x: room.x - .3, z: room.z + 1.2 });
   }
 
   function printing(room: Room): void {
@@ -345,10 +406,16 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     const cabinet = kit.cabinet(1.65, .7, .77, 2);
     addModel(cabinet, 'printer-v1', [0, .815, -.02]);
     const tray = kit.formTray(.38); tray.position.set(.54, .82, .03); cabinet.add(tray);
-    placeNearWall(room, `print-cabinet:${room.id}`, cabinet, { w: 1.65, d: .7, h: 1.14, note: '打印柜及台面设备；正面为取件侧。' });
     const rack = kit.shelf(1.05, .42, 1.45, 4);
     for (let level = 0; level < 3; level++) for (const x of [-.25, .25]) addModel(rack, 'paper-stack-v1', [x, .16 + level * .423, 0]);
-    placeNearWall(room, `paper-rack:${room.id}`, rack, { w: 1.05, d: .42, h: 1.45, note: '开放式纸张架；不做柜门和可攀爬台阶。' });
+    const recycle = kit.cabinet(.65, .5, .52, 1);
+    addModel(recycle, 'box-v1', [0, .565, 0]);
+    placeAssembly(room, `print-workflow:${room.id}`, [
+      { id: 'printer', object: cabinet, spec: { w: 1.65, d: .7, h: 1.14, note: '打印柜与取件操作面。' }, offset: { x: 0, z: 0 } },
+      { id: 'paper', object: rack, spec: { w: 1.05, d: .42, h: 1.45, yaw: Math.PI / 2, note: '垂直纸张架；独立碰撞，不封住L形内部。' }, offset: { x: 1.25, z: .55 } },
+      { id: 'recycle', object: recycle, spec: { w: .65, d: .5, h: 1.17, note: '回收低柜与纸箱。' }, offset: { x: -1.3, z: .55 } },
+      { id: 'zone', object: kit.rug(3.5, 2.1), spec: { w: 3.5, d: 2.1, h: .014, visualOnly: true, note: '打印工作区薄地毯，纯视觉。' }, offset: { x: 0, z: .3 } },
+    ], { x: room.x - 1.2, z: room.z + 1.1 });
   }
 
   function storage(room: Room): void {
@@ -359,10 +426,16 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       const label = makeLabel(pool, `B${String(index * 3 + 1).padStart(2, '0')}—B${String(index * 3 + 3).padStart(2, '0')}`, { width: .38, height: .105, foreground: '#4b4131', background: '#dfd1ae', fontSize: 48 });
       label.position.set(-.75 + index * .5, 1.62, .153); shelf.add(label);
     }
-    placeNearWall(room, `archive-shelf:${room.id}`, shelf, { w: 2.1, d: .28, h: 1.82, note: '档案架；保持落地，不增加可攀爬层板。' });
     const cart = kit.cabinet(.95, .46, .67, 1);
     addModel(cart, 'box-v1', [0, .715, 0]);
-    placeNearWall(room, `archive-return-cart:${room.id}`, cart, { w: .95, d: .46, h: 1.27, note: '档案归还低柜；纸箱复用既有资产。' });
+    const low = kit.cabinet(.72, .48, .45, 1);
+    addModel(low, 'box-v1', [0, .49, 0]);
+    placeAssembly(room, `archive-group:${room.id}`, [
+      { id: 'shelf', object: shelf, spec: { w: 2.1, d: .28, h: 1.82, note: '编号档案货架；保持落地，不增加可攀爬层板。' }, offset: { x: 0, z: 0 } },
+      { id: 'return', object: cart, spec: { w: .95, d: .46, h: 1.27, note: '档案归还低柜与纸箱。' }, offset: { x: 1.45, z: .75 } },
+      { id: 'low', object: low, spec: { w: .72, d: .48, h: 1.05, note: '旧档案低岛。' }, offset: { x: -1.25, z: .65 } },
+      { id: 'zone', object: kit.rug(3.1, 1.65), spec: { w: 3.1, d: 1.65, h: .014, visualOnly: true, note: '归还区薄色带，纯视觉。' }, offset: { x: 0, z: .55 } },
+    ], { x: room.x - .6, z: room.z + 1.0 });
   }
 
   function tea(room: Room): void {
@@ -379,14 +452,28 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     } else {
       skipped.push({ roomId: room.id, id: `tea-water:${room.id}`, reason: '缺少既有饮水器模型，未放置空实体或空碰撞' });
     }
+    const left = kit.stool(), right = kit.stool(); left.rotation.y = right.rotation.y = Math.PI;
+    placeAssembly(room, `tea-pause:${room.id}`, [
+      { id: 'left', object: left, spec: { w: .46, d: .47, h: .88, note: '茶水短暂停留席。' }, offset: { x: -.55, z: 0 } },
+      { id: 'right', object: right, spec: { w: .46, d: .47, h: .88, note: '茶水短暂停留席。' }, offset: { x: .55, z: 0 } },
+      { id: 'table', object: kit.lowTable(.85, .55, .62), spec: { w: .85, d: .55, h: .66, note: '茶水小边桌。' }, offset: { x: 0, z: .72 } },
+      { id: 'rug', object: kit.rug(2.35, 1.75), spec: { w: 2.35, d: 1.75, h: .014, visualOnly: true, note: '茶水停留区薄地毯，纯视觉。' }, offset: { x: 0, z: .3 } },
+    ], { x: room.x + 1.0, z: room.z + 1.2 });
   }
 
   function boss(room: Room): void {
     mount(room, `boss-award:${room.id}`, kit.sign({ text: '年度最具解释权领导\n获奖理由：定义始终稳定\n除非定义需要调整', width: 2.35, height: .92, lines: ['年度最具解释权领导', '获奖理由：定义始终稳定', '除非定义需要调整'], fontSize: 54, foreground: '#ead8ae', background: '#303b37' }), 2.35, .92, 1.53, 'material');
-    const cabinet = kit.cabinet(2.05, .47, .72, 3);
-    for (let index = 0; index < 4; index++) addModel(cabinet, 'paper-stack-v1', [-.66 + index * .4, .765 + index * .012, 0], index * .04);
-    placeNearWall(room, `boss-credenza:${room.id}`, cabinet, { w: 2.05, d: .47, h: .86, note: '总经理室低柜；不侵占房间中央会谈区。' });
-    placeOpen(room, `boss-rug:${room.id}`, kit.rug(3.6, 2.5), { w: 3.6, d: 2.5, h: .014, visualOnly: true, note: '薄织物地毯，非实体碰撞。' });
+    const background = kit.shelf(1.8, .36, 1.55, 4);
+    for (let index = 0; index < 3; index++) addModel(background, 'paper-stack-v1', [-.52 + index * .52, .59, 0], index * .06);
+    addModel(background, 'box-v1', [.48, .17, 0]);
+    placeNearWall(room, `boss-background:${room.id}`, background, { w: 1.8, d: .36, h: 1.55, note: '总经理室开放背景陈列；与普通低柜形成不同轮廓。' });
+    const left = kit.stool(), right = kit.stool(); left.rotation.y = right.rotation.y = Math.PI;
+    placeAssembly(room, `boss-talk:${room.id}`, [
+      { id: 'visitor-left', object: left, spec: { w: .46, d: .47, h: .88, note: '访客席；保留上下座与绕行动线。' }, offset: { x: -1.0, z: 0 } },
+      { id: 'visitor-right', object: right, spec: { w: .46, d: .47, h: .88, note: '访客席；保留上下座与绕行动线。' }, offset: { x: 1.0, z: 0 } },
+      { id: 'table', object: kit.lowTable(1.35, .65, .69), spec: { w: 1.35, d: .65, h: .72, note: '低会谈桌。' }, offset: { x: 0, z: .55 } },
+      { id: 'rug', object: kit.rug(3.4, 2.3), spec: { w: 3.4, d: 2.3, h: .014, visualOnly: true, note: '会谈组地毯，纯视觉。' }, offset: { x: 0, z: .25 } },
+    ], { x: room.x - 1.2, z: room.z + 1.3 });
   }
 
   function admin(room: Room): void {
@@ -394,15 +481,37 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     const cabinet = kit.cabinet(1.95, .52, .79, 3);
     for (const x of [-.57, 0, .57]) { const tray = kit.formTray(.4); tray.position.set(x, .835, 0); cabinet.add(tray); }
     placeNearWall(room, `admin-forms:${room.id}`, cabinet, { w: 1.95, d: .52, h: 1.04, note: '行政表单流转柜；三层表单架在台面内。' });
+    const side = kit.cabinet(.55, .45, .55, 1);
+    const tray = kit.formTray(.36); tray.position.set(0, .595, 0); side.add(tray);
+    const tab = kit.sign({ text: '取号后等候', width: .46, height: .16, fontSize: 46, frame: false, background: '#e8e1ce', foreground: '#3e4b41' }); tab.position.set(0, .32, .241); side.add(tab);
+    placeAssembly(room, `admin-waiting:${room.id}`, [
+      { id: 'bench', object: kit.bench(1.35), spec: { w: 1.35, d: .58, h: .86, note: '行政等候软凳；保留起身空间。' }, offset: { x: 0, z: 0 } },
+      { id: 'side', object: side, spec: { w: .55, d: .45, h: .82, note: '表单等候边柜与取号提示。' }, offset: { x: 1.1, z: -.05 } },
+      { id: 'rug', object: kit.rug(2.4, 1.6), spec: { w: 2.4, d: 1.6, h: .014, visualOnly: true, note: '行政等候区薄地毯，纯视觉。' }, offset: { x: .35, z: .1 } },
+    ], { x: room.x - 1.2, z: room.z + 1.2 });
   }
 
   function work(room: Room): void {
     const copy = WORK_COPY[room.name] ?? WORK_COPY['第二事业部'];
-    mount(room, `work-board:${room.id}`, kit.sign({ text: copy.title, width: 2.4, height: 1.03, lines: [copy.title, ...copy.lines], fontSize: 54, foreground: '#3b493f', background: room.name === '增长一组' ? '#d7cba8' : '#dde1d4' }), 2.4, 1.03, 1.46, 'material');
-    const cart = kit.cabinet(1.1, .43, .69, 2);
-    const tray = kit.formTray(.39); tray.position.set(0, .735, 0); cart.add(tray);
-    const tab = kit.sign({ text: copy.pin[0], width: .66, height: .16, fontSize: 49, frame: false, background: '#e8e1ce', foreground: '#3e4b41' }); tab.position.set(0, .43, .231); cart.add(tab);
-    placeNearWall(room, `work-file-cart:${room.id}`, cart, { w: 1.1, d: .43, h: .96, note: '贴墙文件车；不增加同款办公桌。' });
+    const isGrowth = room.name === '增长一组', isProduct = room.name === '产品三组';
+    mount(room, `work-board:${room.id}`, kit.displayPanel({ text: `${copy.title}\n${copy.lines.join('\n')}`, width: isGrowth ? 3.05 : 2.55, height: isGrowth ? 1.28 : 1.03, lines: [copy.title, ...copy.lines], fontSize: 54, foreground: '#3b493f', background: isProduct ? '#9f8059' : isGrowth ? '#d7cba8' : '#dde1d4', accent: '#c6a065' }), isGrowth ? 3.05 : 2.55, isGrowth ? 1.28 : 1.03, 1.52, 'material');
+    const tableDepth = isGrowth ? .85 : isProduct ? .72 : .62;
+    const tableY = isGrowth || isProduct ? .695 : .865;
+    const table = isGrowth || isProduct ? kit.collaborationTable(isGrowth ? 2.4 : 1.55, tableDepth) : kit.cabinet(1.85, tableDepth, .82, 2);
+    addModel(table, 'paper-stack-v1', [-.35, tableY, 0], -.08);
+    if (isProduct) addModel(table, 'box-v1', [.35, tableY, 0]);
+    else addModel(table, 'stationery-v1', [.42, tableY, .04]);
+    const shelfHeight = room.pressure ? .96 : 1.35;
+    const shelf = kit.shelf(isProduct ? .9 : 1.0, .34, shelfHeight, 3);
+    addModel(shelf, 'paper-stack-v1', [0, .18, 0]);
+    const bench = kit.bench(1.35);
+    const preferred = isGrowth ? { x: room.x + 1.4, z: room.z + 1.2 } : isProduct ? { x: room.x - 1.5, z: room.z - 1.2 } : { x: room.x - 1.6, z: room.z + 1.5 };
+    placeAssembly(room, `work-island:${room.id}`, [
+      { id: 'table', object: table, spec: { w: isGrowth ? 2.4 : isProduct ? 1.55 : 1.85, d: tableDepth, h: isGrowth || isProduct ? .96 : 1.12, note: `${copy.title}功能组。` }, offset: { x: 0, z: 0 } },
+      { id: 'shelf', object: shelf, spec: { w: isProduct ? .9 : 1.0, d: .34, h: shelfHeight + .22, note: `${copy.pin[0]}开放资料组。` }, offset: { x: isGrowth ? 1.85 : isProduct ? 1.5 : 1.65, z: -.4 } },
+      { id: 'bench', object: bench, spec: { w: 1.35, d: .58, h: .86, note: '协作软凳；保留起身和绕行空间。' }, offset: { x: -.25, z: 1.1 } },
+      { id: 'rug', object: kit.rug(isGrowth ? 3.4 : 3.0, 2.35), spec: { w: isGrowth ? 3.4 : 3.0, d: 2.35, h: .014, visualOnly: true, note: '部门组团薄地毯，纯视觉。' }, offset: { x: .25, z: .35 } },
+    ], preferred);
     for (const desk of world.desks.filter(item => item.roomId === room.id && !item.home)) {
       const tag = new THREE.Group(); tag.name = `desk-department:${desk.id}`; tag.position.set(desk.x, .75, desk.z); tag.rotation.y = desk.yaw; tag.userData.visualOnly = true;
       const label = makeLabel(pool, copy.short, { width: .66, height: .12, foreground: '#e8dfc7', background: '#3b5145', fontSize: 46 });

@@ -1,0 +1,21 @@
+{
+  "name": "leadership-entry-experience",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/three": "^0.183.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}

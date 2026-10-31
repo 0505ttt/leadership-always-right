@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#202720">
+    <link rel="icon" href="data:,">
+    <title>领导说的都是真的 · 领导动作联合验收</title>
+    <style>
+      html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#202720;color:#e6ddc7;font:14px system-ui,sans-serif}#scene{position:fixed;inset:0}.panel{position:fixed;left:22px;top:22px;max-width:460px;padding:16px 18px;background:#202720e8;border:1px solid #e4b96f66;pointer-events:none}.panel p{margin:5px 0;line-height:1.55}.panel small{color:#b9c1af}.toolbar{position:fixed;left:22px;bottom:22px;display:flex;gap:8px;flex-wrap:wrap;max-width:70%}.toolbar button{border:1px solid #e4b96f88;background:#263329;color:#e6ddc7;padding:9px 13px;cursor:pointer}.toolbar button:hover{background:#e4b96f;color:#202720}.toolbar .views{position:fixed;right:22px;bottom:22px;max-width:30%;justify-content:flex-end}.error{color:#ffb39d;white-space:pre-wrap}
+    </style>
+  </head>
+  <body>
+    <div id="scene"></div>
+    <section class="panel"><strong>领导动作联合验收</strong><p id="status">正在加载正式场景与模型…</p><small>真实 inspection 驱动。受控固定步长，不是自然整局或 FPS 验收；生产扫视 ±40°，不冒充接口 ±90° 上限。</small><p id="metrics"></p></section>
+    <div class="toolbar"><button data-stage="patrol">巡视</button><button data-stage="inspectBlend">停步混合</button><button data-stage="inspect">停步检查</button><button data-stage="searchFast">快速搜查</button><button data-stage="searchLeft">左扫</button><button data-stage="searchRight">右扫</button></div>
+    <div class="toolbar views"><button data-view="context">工位全景</button><button data-view="front">正面</button><button data-view="side">侧面</button><button data-view="perspective">三分之四</button></div>
+    <script type="module" src="/src/presentation/leader-verification.ts"></script>
+  </body>
+</html>

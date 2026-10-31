@@ -6,13 +6,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const output = path.join(root, 'docs/kimi/verification/room-decorations');
+const seed = Number(process.env.ROOM_DECORATIONS_SEED ?? '42');
+const outputName = process.env.ROOM_DECORATIONS_OUT ?? 'room-decorations';
+const output = path.join(root, 'docs/kimi/verification', outputName);
 const setIndex = process.argv.indexOf('--set');
 const set = setIndex >= 0 ? process.argv[setIndex + 1] : '';
 if (!['a', 'b'].includes(set)) throw new Error('Use --set a for rooms 0–4 or --set b for rooms 5–9.');
 const wantedIds = set === 'a' ? [0, 1, 2, 3, 4] : [5, 6, 7, 8, 9];
 const port = 5192;
-const base = `http://127.0.0.1:${port}/leadership-always-right/room-decoration-preview.html`;
+const base = `http://127.0.0.1:${port}/leadership-always-right/room-decoration-preview.html?seed=${seed}`;
 await mkdir(output, { recursive: true });
 const portIsOpen = () => new Promise(resolve => {
   const socket = createConnection({ host: '127.0.0.1', port });
@@ -41,7 +43,7 @@ process.on('exit', () => {
     try { process.kill(-server.pid, 'SIGTERM'); } catch { /* Already closed. */ }
   }
 });
-const report = { set, rooms: wantedIds, scope: '分批真实浏览器截图与渲染统计；不做整局或硬件性能结论', captures: [], roomRenderInfo: {}, errors: [], warnings: [], failures: [], visualReview: 'pending-actual-image-review' };
+const report = { set, seed, rooms: wantedIds, scope: '分批真实浏览器截图与渲染统计；不做整局或硬件性能结论', captures: [], roomRenderInfo: {}, errors: [], warnings: [], failures: [], visualReview: 'pending-actual-image-review' };
 let browser;
 try {
   let ready = false;

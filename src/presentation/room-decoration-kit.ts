@@ -104,8 +104,8 @@ export class RoomDecorationKit {
 
   rounded(parent: THREE.Object3D, material: THREE.MeshStandardMaterial, size: readonly [number, number, number], position: readonly [number, number, number], radius = .025): THREE.Mesh {
     const safeRadius = Math.min(radius, Math.min(...size) * .45);
-    const key = `decor-rounded:${size.join(':')}:${safeRadius}`;
-    const geometry = this.pool.geometry(key, () => new RoundedBoxGeometry(...size, 2, safeRadius));
+    const key = `decor-rounded:${size.join(':')}:${safeRadius}:1`;
+    const geometry = this.pool.geometry(key, () => new RoundedBoxGeometry(...size, 1, safeRadius));
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(...position);
     mesh.castShadow = true;
@@ -188,6 +188,24 @@ export class RoomDecorationKit {
     }
     this.box(group, this.materials.dark, [.38, .025, .025], [0, .6, -.2]);
     return group;
+  }
+
+  bench(width = 1.35): THREE.Group {
+    const group = new THREE.Group();
+    this.rounded(group, this.materials.fabric, [width, .12, .52], [0, .44, 0], .045);
+    for (const x of [-width / 2 + .13, width / 2 - .13]) for (const z of [-.18, .18]) {
+      this.cylinder(group, this.materials.dark, [.022, .028], .39, [x, .195, z], 8);
+    }
+    this.rounded(group, this.materials.fabric, [width, .36, .07], [0, .68, -.225], .025);
+    return group;
+  }
+
+  collaborationTable(width = 2.4, depth = .85): THREE.Group {
+    return this.lowTable(width, depth, .69);
+  }
+
+  displayPanel(spec: SignSpec & { accent: string }): THREE.Group {
+    return this.sign({ ...spec, frame: true, background: spec.background ?? '#dde1d4' });
   }
 
   shelf(width: number, depth: number, height: number, levels = 4): THREE.Group {

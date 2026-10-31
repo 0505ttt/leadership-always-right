@@ -4,6 +4,7 @@ import { attachPot } from './objects';
 import { litAt } from './player';
 import { visible } from './boss';
 import { beginInspection, cancelInspection } from './inspection';
+import { safePropPlacement } from './prop-safety';
 
 const definitions:Record<Exclude<RuleKind,'return'>,{quote:string;effect:string;duration:number}>={
   cake:{quote:'把饼画大一点，大家才有奔头。',effect:'目标饼膨胀 · 挡双方视线 · 按E推行',duration:22},
@@ -23,14 +24,11 @@ function actor(state:GameState,id:string): (Vec2&{yaw:number})|undefined {
 function safeCake(state:GameState,id:string,world:WorldDef,query:WorldQuery,scale=3):boolean {
   const prop=state.props.find(item=>item.id===id);
   if(!prop||prop.held)return false;
-  const radius=.3*scale;
-  const home=world.desks.find(d=>d.home)?.seat??world.spawn;
-  if(distance(prop,home)<radius+1||distance(prop,state.player)<radius+.35||distance(prop,state.boss)<radius+.36)return false;
-  if(state.colleagues.some(c=>distance(c,prop)<radius+.35))return false;
-  const held=prop.held;prop.held=true;
-  const safe=query.validPlacement(prop,radius,state);
-  prop.held=held;
-  return safe;
+  // The current step must be safe now, and the announced final volume must also
+  // retain workstation clearances and every mandatory route. Final checks are
+  // cached; only the cheap current-volume query runs on every growth frame.
+  return safePropPlacement(state,world,query,prop,prop,scale,false)
+    && safePropPlacement(state,world,query,prop,prop,3,true);
 }
 
 function targetLabel(state:GameState,world:WorldDef,kind:RuleKind,targetId:string,roomId:number,sourceOwner?:string):string {

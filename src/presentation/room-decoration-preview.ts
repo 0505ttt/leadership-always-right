@@ -6,7 +6,10 @@ import { VisualResourcePool, addBox } from './visual-utils';
 import { createRoomDecorations, type RoomDecorationModelId, type RoomDecorationUpdateState } from './room-decorations';
 
 type ViewMode = 'game' | 'sign' | 'material' | 'overview';
-const world = generateWorld(618);
+const previewParams = new URLSearchParams(location.search);
+const requestedSeed = Number(previewParams.get('seed') ?? '42');
+const world = generateWorld(Number.isFinite(requestedSeed) ? requestedSeed : 42);
+document.querySelector<HTMLParagraphElement>('.masthead .eyebrow')!.textContent = `ROOM ART INSPECTION · ${world.seed}`;
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
 const loading = document.querySelector<HTMLDivElement>('#loading')!;
 const loadingDetail = document.querySelector<HTMLParagraphElement>('#loading-detail')!;
@@ -134,14 +137,32 @@ async function start(): Promise<void> {
   let tourTimer: number | undefined;
   let transparent = false, raised = false;
 
+  function clearPartitionView(a: THREE.Vector3, b: THREE.Vector3): boolean {
+    const solids = [...world.walls.filter(wall => wall.partition), ...world.desks.map(desk => ({ x: desk.x, z: desk.z, w: 1.6, d: .85 }))];
+    return !solids.some(wall => {
+      let lo = 0, hi = 1;
+      const dx = b.x - a.x, dz = b.z - a.z;
+      for (const [origin, delta, min, max] of [[a.x, dx, wall.x - wall.w / 2, wall.x + wall.w / 2], [a.z, dz, wall.z - wall.d / 2, wall.z + wall.d / 2]] as const) {
+        if (Math.abs(delta) < 1e-8) { if (origin < min || origin > max) return false; continue; }
+        const first = (min - origin) / delta, second = (max - origin) / delta;
+        lo = Math.max(lo, Math.min(first, second)); hi = Math.min(hi, Math.max(first, second));
+        if (lo > hi) return false;
+      }
+      return true;
+    });
+  }
+
   function gameView(room: typeof activeRoom): { position: THREE.Vector3; target: THREE.Vector3 } {
-    const primary = decorations.getDiagnostics().colliders.find(item => item.roomId === room.id);
+    const colliders = decorations.getDiagnostics().colliders;
+    const primary = colliders.find(item => item.id === `boss-talk:${room.id}:table`) ?? colliders.find(item => item.roomId === room.id);
     const centerTarget = new THREE.Vector3(room.x, 1.03, room.z);
     if (primary && room.kind !== 'front') {
-      const normal = new THREE.Vector3(Math.sin(primary.yaw), 0, Math.cos(primary.yaw));
       const target = new THREE.Vector3(primary.x, 1.03, primary.z);
-      const position = target.clone().addScaledVector(normal, 4.4); position.y = 1.62;
-      if (Math.abs(position.x - room.x) < room.w / 2 - .35 && Math.abs(position.z - room.z) < room.d / 2 - .35) return { position, target };
+      for (const yaw of [primary.yaw, primary.yaw + Math.PI / 2, primary.yaw + Math.PI, primary.yaw - Math.PI / 2]) {
+        const normal = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+        const position = target.clone().addScaledVector(normal, room.kind === 'meeting' ? 5.2 : 4.4); position.y = 1.62;
+        if (Math.abs(position.x - room.x) < room.w / 2 - .35 && Math.abs(position.z - room.z) < room.d / 2 - .35 && clearPartitionView(position, target)) return { position, target };
+      }
     }
     const door = world.doors.find(item => item.a === room.id || item.b === room.id);
     if (!door) return { position: new THREE.Vector3(room.x - 2.6, 1.62, room.z + 5.5), target: centerTarget };
@@ -254,6 +275,8 @@ async function start(): Promise<void> {
 
   const api = {
     ready: true,
+    seed: world.seed,
+    getWorld: () => world,
     setCaptureMode: (paused: boolean) => { document.body.classList.toggle('capture-clean', paused); renderer.setAnimationLoop(paused ? null : animate); renderer.render(scene, camera); },
     rooms: world.rooms.map(room => ({ id: room.id, name: room.name, kind: room.kind, x: room.x, z: room.z, w: room.w, d: room.d, pressure: room.pressure })),
     loadedModels: [...models.keys()], loadErrors,

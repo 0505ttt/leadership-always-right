@@ -134,13 +134,20 @@ export function updateInspection(state:GameState,dt:number,world:WorldDef,query:
   }
   boss.lookYaw=boss.yaw+Math.sin(state.elapsed*2.2)*LOOK_SWEEP;
   const sees=controls.seesPlayer();
+  if(sees&&inspectionCompliant(state,world)) {
+    inspection.lastKnown=copyPoint(state.player);boss.lastSeen=copyPoint(state.player);
+    inspection.checkFor+=dt;boss.contactFor=0;
+    if(inspection.checkFor>=2)finish(state,true);
+    return true;
+  }
+  // A visible but uncaught player must not turn the bounded inspection into a
+  // permanent chase. Returning home and proving compliance still resolves first.
+  if(state.elapsed>=inspection.searchUntil) {
+    inspection.phase='alert';boss.mode='alert';boss.path=[];boss.contactFor=0;inspection.checkFor=0;
+    return true;
+  }
   if(sees) {
     inspection.lastKnown=copyPoint(state.player);boss.lastSeen=copyPoint(state.player);
-    if(inspectionCompliant(state,world)) {
-      inspection.checkFor+=dt;boss.contactFor=0;
-      if(inspection.checkFor>=2)finish(state,true);
-      return true;
-    }
     inspection.checkFor=0;boss.mode='chase';boss.lookYaw=boss.yaw;
     if(distance(boss,state.player)>1||!query.lineOfSight(boss,state.player,1.1+state.player.y,state,'solid'))controls.move(state.player,4.1);
     else boss.yaw=Math.atan2(state.player.x-boss.x,state.player.z-boss.z);
@@ -150,10 +157,6 @@ export function updateInspection(state:GameState,dt:number,world:WorldDef,query:
     return true;
   }
   boss.contactFor=0;inspection.checkFor=0;
-  if(state.elapsed>=inspection.searchUntil) {
-    inspection.phase='alert';boss.mode='alert';boss.path=[];
-    return true;
-  }
   if(boss.mode==='chase') {
     runtime.inspectionSearchPoints=searchPoints(state,world,query);runtime.inspectionSearchIndex=0;runtime.nextPathAt=0;
   }

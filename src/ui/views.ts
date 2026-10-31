@@ -1,5 +1,14 @@
 import './theme.css';
+import './departure.css';
 import type { Page, Settings, UICommand, UIModel } from '../contracts/game';
+import {
+  renderDepartureError,
+  renderDepartureHome,
+  renderDeparturePaused,
+  renderDepartureResult,
+  renderDepartureSettings,
+  renderDepartureTutorial,
+} from './departure-views';
 
 export interface UIInstance {
   render(model: UIModel): void;
@@ -244,6 +253,7 @@ export function createBaseUI(root: HTMLElement, onCommand: (command: UICommand) 
   root.classList.add('ui-root');
   let previousHTML = '';
   let credits = false;
+  let multiplayerOpen = false;
   let lastPage: Page | null = null;
   let previousStructure = '';
   let currentModel: UIModel | undefined;
@@ -253,10 +263,21 @@ export function createBaseUI(root: HTMLElement, onCommand: (command: UICommand) 
     const target = event.target as HTMLElement;
     const control = target.closest<HTMLButtonElement>('button');
     if (!control || control.disabled) return;
+    if (control.dataset.action === 'multiplayer') {
+      credits = false;
+      multiplayerOpen = !multiplayerOpen;
+      previousHTML = '';
+      refresh();
+      if (multiplayerOpen) root.querySelector<HTMLButtonElement>('.departure-modal button')?.focus();
+      else root.querySelector<HTMLButtonElement>('.departure-multiplayer-link')?.focus();
+      return;
+    }
     if (control.dataset.action === 'credits') {
+      multiplayerOpen = false;
       credits = !credits;
       previousHTML = '';
-      root.dispatchEvent(new CustomEvent('kimi-ui-refresh'));
+      refresh();
+      if (credits) root.querySelector<HTMLButtonElement>('.departure-modal button')?.focus();
       return;
     }
     const command = control.dataset.command;
@@ -272,13 +293,15 @@ export function createBaseUI(root: HTMLElement, onCommand: (command: UICommand) 
   };
   const refresh = () => { if (currentModel) update(currentModel); };
   const keydown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape' && credits) {
+    if (event.key === 'Escape' && (credits || multiplayerOpen)) {
+      const returnFocus = multiplayerOpen ? '.departure-multiplayer-link' : '[data-action="credits"]';
       credits = false;
+      multiplayerOpen = false;
       previousHTML = '';
       refresh();
       event.preventDefault();
       event.stopImmediatePropagation();
-      root.querySelector<HTMLButtonElement>('[data-action="credits"]')?.focus();
+      root.querySelector<HTMLButtonElement>(returnFocus)?.focus();
     }
   };
   root.addEventListener('click', click);
@@ -290,12 +313,13 @@ export function createBaseUI(root: HTMLElement, onCommand: (command: UICommand) 
       currentModel = model;
       if (lastPage !== model.page) {
         credits = false;
+        multiplayerOpen = false;
         lastPage = model.page;
       }
       root.dataset.page = model.page;
       root.style.setProperty('--text-scale', String(model.settings.textScale));
       root.classList.toggle('reduce-motion', model.settings.reducedMotion);
-      const structure = [model.page, credits, model.tutorialPage, model.phone ? model.history.join('\u0001') : ''].join('|');
+      const structure = [model.page, credits, multiplayerOpen, model.tutorialPage, model.phone ? model.history.join('\u0001') : ''].join('|');
       if (structure === previousStructure && model.page === 'playing') {
         syncHUD(root, model);
         return;
@@ -306,16 +330,16 @@ export function createBaseUI(root: HTMLElement, onCommand: (command: UICommand) 
       }
       let content: string;
       switch (model.page) {
-        case 'home': content = `${masthead(model)}${home(credits)}`; break;
-        case 'tutorial': content = tutorial(model); break;
-        case 'settings': content = settings(model); break;
-        case 'loading': content = loading(model, false); break;
-        case 'ready': content = loading(model, true); break;
+        case 'home': content = renderDepartureHome(model, credits, multiplayerOpen); break;
+        case 'tutorial': content = renderDepartureTutorial(model); break;
+        case 'settings': content = renderDepartureSettings(model); break;
+        case 'loading': content = ''; break;
+        case 'ready': content = ''; break;
         case 'playing': content = hud(model); break;
         case 'computer': content = ''; break;
-        case 'paused': content = paused(); break;
-        case 'result': content = result(model); break;
-        case 'error': content = errorPage(model); break;
+        case 'paused': content = renderDeparturePaused(model); break;
+        case 'result': content = renderDepartureResult(model); break;
+        case 'error': content = renderDepartureError(model); break;
       }
       if (model.phone && model.page === 'playing') content += phone(model);
       if (model.page === 'playing' || model.page === 'settings' || content !== previousHTML) {

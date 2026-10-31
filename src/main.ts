@@ -1,10 +1,12 @@
 import { createGame, stepGame } from './rules/game';
 import { generateWorld } from './world/generate';
 import { makeWorldQuery } from './world/query';
-import { validateWorld } from './world/validate';
+import { hasNormalOfficeDensity, validateWorld } from './world/validate';
+import { validateWorkstationAccess } from './world/workstations';
 import { OfficeScene } from './presentation/scene';
 import { createCharacterLibrary } from './presentation/characters';
 import { GameInput } from './gameplay/input';
+import { requiresLandscapeForTouch } from './gameplay/orientation';
 import { FrameMetrics } from './gameplay/performance';
 import { RuntimeAssets } from './gameplay/assets';
 import { runtimeAssetSpecs } from './gameplay/runtime-catalog';
@@ -12,8 +14,10 @@ import { createOfficeAudio } from './audio/engine';
 import { createAudioObserver } from './audio/observer';
 import { createComputerView } from './computer/view';
 import { availableComputer,openComputer,closeComputer,advanceComputer,commandComputer } from './computer/game';
-import { createLoadingScreen } from './loading/index';
-import type { LoadingProgress,LoadingScreen } from './loading/types';
+import type { LoadingProgress } from './loading/types';
+import { createEntryExperience } from '../design/entry-experience/src/app';
+import type { EntryExperience } from '../design/entry-experience/src/contracts';
+import { entryIsReady, loadingProgressKey } from './gameplay/entry-gate';
 import { bindUI } from './ui/bindings';
 import type { Page, Settings, UICommand, UIModel } from './contracts/game';
 
@@ -24,17 +28,26 @@ const characterLibrary=createCharacterLibrary({assets:runtimeAssets});
 const runtimeSpecs=runtimeAssetSpecs(import.meta.env.BASE_URL,version);
 const defaults:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1,musicVolume:.4,effectsVolume:.75,voiceVolume:.85};
 let settings={...defaults};try{const saved=JSON.parse(localStorage.getItem('leadership-settings')??'null');if(saved&&typeof saved==='object')settings={...defaults,...saved};}catch{/* A blocked/corrupt preference store must not prevent local gameplay. */}
-let world=generateWorld(618),state=createGame(world),query=makeWorldQuery(world),page:Page='home';
+let loadingSeed=freshSeed(),world=generateWorld(loadingSeed),state=createGame(world),query=makeWorldQuery(world),page:Page='loading';
 let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home',lastPausedAt=-Infinity,visualAssetsReady=false;
 let scene:OfficeScene,input:GameInput,ui:{render:(m:UIModel)=>void;destroy:()=>void};
 const audio=createOfficeAudio({music:settings.musicVolume,effects:settings.effectsVolume,voice:settings.voiceVolume});
 const audioObserver=createAudioObserver(audio);
-let loadingScreen:LoadingScreen,computerView:ReturnType<typeof createComputerView>,loadingProgress:LoadingProgress={stage:'download',completedResources:0,totalResources:runtimeSpecs.length},pendingDestination:'ready'|'home'='home',pausedFromComputer=false,loadingSeed=618;
-const host=document.querySelector<HTMLElement>('#scene')!,uiRoot=document.querySelector<HTMLElement>('#ui')!;
-const metrics=new FrameMetrics();let accumulator=0,last=performance.now(),uiAccumulator=0,loadingToken=0;
+let entry:EntryExperience|undefined,computerView:ReturnType<typeof createComputerView>,loadingProgress:LoadingProgress={stage:'download',completedResources:0,totalResources:runtimeSpecs.length},pendingDestination:'ready'|'home'='home',pausedFromComputer=false,lastEntryProgressKey='';
+const host=document.querySelector<HTMLElement>('#scene')!,uiRoot=document.querySelector<HTMLElement>('#ui')!,entryRoot=document.querySelector<HTMLElement>('#entry-root')!,entryHost=document.querySelector<HTMLElement>('#entry')!;
+const metrics=new FrameMetrics();let accumulator=0,last=performance.now(),computerLast=0,uiAccumulator=0,loadingToken=0;
 const params=new URLSearchParams(location.search),preview=params.get('preview');
 function freshSeed(){return crypto.getRandomValues(new Uint32Array(1))[0];}
-function show(){loadingScreen?.setVisible(page==='loading'||page==='ready'||page==='error');if(loadingScreen&&(page==='loading'||page==='ready'||page==='error'))loadingScreen.update(loadingProgress);computerView?.update(page==='computer'?state:{...state,computer:null});uiRoot.style.visibility=(page==='loading'||page==='ready'||page==='error')?'hidden':'';const model=bindUI(state,world,{page,version,tutorialPage,settings,loadingStage,error,phone,preview:!!preview});if(page==='playing'&&availableComputer(state,world,query))model.interaction={label:`${model.interaction?.label??''} · F 使用电脑`,progress:model.interaction?.progress??0};ui?.render(model);}
+function show(){
+ const entryPage=page==='loading'||page==='ready'||page==='error'||page==='home';
+ entryRoot.hidden=!entryPage;document.body.classList.toggle('entry-open',entryPage);entry?.setVisible(entryPage);
+ if(entryPage&&entry){
+  entry.setPhase(page==='home'?'home':'loading');
+  const key=loadingProgressKey(loadingProgress);if(key!==lastEntryProgressKey){lastEntryProgressKey=key;entry.update(loadingProgress);}
+ }
+ computerView?.update(page==='computer'?state:{...state,computer:null});uiRoot.style.visibility=entryPage?'hidden':'';
+ const model=bindUI(state,world,{page,version,tutorialPage,settings,loadingStage,error,phone,preview:!!preview});if(page==='playing'&&availableComputer(state,world,query))model.interaction={label:`${model.interaction?.label??''} · F 使用电脑`,progress:model.interaction?.progress??0};ui?.render(model);
+}
 function pause(reason?:string){if(page!=='playing'&&page!=='computer')return;pausedFromComputer=page==='computer';audio.pause();if(reason){state.message=reason;state.messageUntil=state.elapsed+8;}page='paused';lastPausedAt=performance.now();phone=false;input.setEnabled(false);accumulator=0;show();}
 function resumeFromKeyboard(key:'Escape'|'Enter'){
  if(page!=='paused')return false;
@@ -42,33 +55,41 @@ function resumeFromKeyboard(key:'Escape'|'Enter'){
  if(key==='Enter'||performance.now()-lastPausedAt>150)begin();
  return true;
 }
-function begin(){void audio.resume();if(pausedFromComputer&&state.computer){pausedFromComputer=false;page='computer';input.setEnabled(false);}else{page='playing';phone=false;input.yaw=state.player.yaw+(state.elapsed===0?Math.PI:0);input.setEnabled(true);void input.lock();}last=performance.now();accumulator=0;show();}
-function home(){audioObserver.reset();pausedFromComputer=false;if(!visualAssetsReady){void loadGame(world.seed,'home');return;}loadingToken++;page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);show();}
-async function loadGame(seed:number,nextPage:'ready'|'home'='ready'){
- const token=++loadingToken;loadingSeed=seed;pendingDestination=nextPage;audioObserver.reset();closeComputer(state);pausedFromComputer=false;loadingProgress={stage:'download',completedResources:0,totalResources:runtimeSpecs.length,detail:'读取本局必需模型，已成功的资源会复用缓存'};page='loading';input.setEnabled(false);scene.clear();loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
+function begin(){void audio.resume();if(pausedFromComputer&&state.computer){pausedFromComputer=false;page='computer';input.setEnabled(false);}else{page='playing';phone=false;input.yaw=state.player.yaw+(state.elapsed===0?Math.PI:0);input.setEnabled(true);void input.lock();}last=performance.now();computerLast=last;accumulator=0;show();}
+function readyForEntry(){return entryIsReady(loadingProgress,visualAssetsReady);}
+function startReadyGame(){if(!readyForEntry())return;begin();}
+function enterHome(){
+ if(!readyForEntry())return;
+ // Synchronous within the entry gesture: unlock audio before any state update.
+ void audio.resume();
+ if(pendingDestination==='home'){page='home';input.setEnabled(false);show();}else startReadyGame();
+}
+function home(){audioObserver.reset();pausedFromComputer=false;if(!visualAssetsReady){void loadGame(world.seed,'home');return;}loadingToken++;pendingDestination='home';page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);show();}
+async function loadGame(seed:number,nextPage:'ready'|'home'='home'){
+ const token=++loadingToken;loadingSeed=seed;pendingDestination=nextPage;visualAssetsReady=false;audioObserver.reset();closeComputer(state);pausedFromComputer=false;loadingProgress={stage:'download',completedResources:0,totalResources:runtimeSpecs.length,detail:'读取本局必需模型，已成功的资源会复用缓存'};page='loading';input.setEnabled(false);scene.clear();loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
  try{
   if(token!==loadingToken)return;
   await runtimeAssets.preload(runtimeSpecs,({completed,total,id,phase,failed})=>{if(token===loadingToken){loadingStage=`模型与贴图就绪 ${completed}/${total}`;loadingProgress={stage:phase??loadingProgress.stage,completedResources:completed,totalResources:total,detail:id?`${phase==='parse'?'解析模型与图片':'读取资源'} · ${id}`:loadingStage,failedItems:failed?.map(item=>({...item,label:item.id}))};show();}});
   if(token!==loadingToken)return;
   loadingProgress={...loadingProgress,stage:'audio',detail:'声音合成与本地语音模块已准备；点击进入时启用播放'};show();
   await characterLibrary.prepare();if(token!==loadingToken)return;
-  scene.useRuntimeAssets(runtimeAssets,runtimeSpecs.map(spec=>spec.id));scene.useCharacterLibrary(characterLibrary);visualAssetsReady=true;
+  scene.useRuntimeAssets(runtimeAssets,runtimeSpecs.map(spec=>spec.id));scene.useCharacterLibrary(characterLibrary);
   loadingStage='装配正式场景并验证陈设、碰撞与必经路线';loadingProgress={...loadingProgress,stage:'scene',detail:loadingStage};show();
   let accepted=false;
-  const seeds=[...Array.from({length:20},(_,attempt)=>(seed+attempt)>>>0),618];
+  const seeds=Array.from({length:20},(_,attempt)=>(seed+attempt)>>>0);
   for(const candidate of seeds){
    if(token!==loadingToken)return;
    world=generateWorld(candidate);state=createGame(world);query=makeWorldQuery(world);
-   if(!validateWorld(world,state,query).valid)continue;
+   if(!hasNormalOfficeDensity(world)||!validateWorld(world,state,query).valid)continue;
    scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);
    if(scene.getRuleVisuals().characters.some(actor=>actor.assetId==='technical-placeholder'))throw new Error('正式角色未接入，停止加载占位成品。');
-   const result=validateWorld(world,state,query);
-   if(result.valid){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`));accepted=true;break;}
+   const result=validateWorld(world,state,query),workstationIssues=validateWorkstationAccess(world,state,query);
+   if(result.valid&&workstationIssues.length===0){world.validation.push(...result.spawnClockDistances.map(d=>`打卡路线${d.toFixed(1)}m`),...result.spawnExitDistances.map(d=>`出口路线${d.toFixed(1)}m`),'21个工位接近与升桌上下椅路线均可用');accepted=true;break;}
    scene.clear();await new Promise(resolve=>requestAnimationFrame(resolve));
   }
-  if(!accepted)throw new Error('正式办公室的陈设与通行路线校验失败，备用种子也未通过。');
+  if(!accepted)throw new Error('正常10房21桌7同事办公室的陈设、全工位与必经路线校验失败。');
   input.yaw=state.player.yaw+Math.PI;scene.render(state,input.yaw,input.pitch,'ready',1/60);await scene.prepare(stage=>{loadingProgress={...loadingProgress,stage,detail:stage==='textures'?'上传本局贴图到显存':'预编译本局材质与透明规则着色器'};show();});if(token!==loadingToken)return;
-  loadingStage='本局资源与场景已准备完成';loadingProgress={...loadingProgress,stage:'ready',detail:loadingStage,failedItems:[]};page='ready';accumulator=0;show();
+  visualAssetsReady=true;loadingStage='本局资源与场景已准备完成';loadingProgress={...loadingProgress,stage:'ready',detail:loadingStage,failedItems:[]};page='ready';accumulator=0;show();
  }catch(e){if(token!==loadingToken)return;error=e instanceof Error?e.message:String(e);page='error';loadingProgress={...loadingProgress,stage:'error',detail:error,failedItems:loadingProgress.failedItems?.length?loadingProgress.failedItems:[{id:'scene',label:'场景准备',message:error}]};show();}
 }
 // Serialize distinct retry clicks: each completed item must update the shared
@@ -99,8 +120,8 @@ async function performAssetRetry(id:string){
 
 function command(cmd:UICommand){
  switch(cmd.type){
-  case 'start':void loadGame(freshSeed());break;
-  case 'begin':begin();break;
+  case 'start':startReadyGame();break;
+  case 'begin':startReadyGame();break;
   case 'home':home();break;
   case 'tutorial':page='tutorial';tutorialPage=0;input?.setEnabled(false);show();break;
   case 'tutorial-page':tutorialPage=Math.max(0,Math.min(2,cmd.page));show();break;
@@ -131,24 +152,32 @@ async function boot(){
   scene=new OfficeScene(host,settings);input=new GameInput(scene.canvas,settings,pause,()=>{phone=!phone;input.setPhoneOpen(phone);show();},resumeFromKeyboard);input.yaw=state.player.yaw;
   const modules=import.meta.glob('./ui/views.ts');const importer=modules['./ui/views.ts'];if(importer){const actual=await importer() as {createUI:typeof technicalShell};ui=actual.createUI(uiRoot,command);}else ui=technicalShell(uiRoot,command);
   computerView=createComputerView(document.body,cmd=>{if(cmd==='close'){closeComputer(state);page='playing';input.setEnabled(true);void input.lock();void audio.resume();last=performance.now();accumulator=0;}else commandComputer(state,cmd);show();});
-  loadingScreen=createLoadingScreen(document.body,{onEnter(){void audio.resume();if(pendingDestination==='home'){page='home';show();}else begin();},onRetry:retryAsset,onTutorial(){page='tutorial';show();}});
+  // Locked production flow: real preload -> ready -> unified home -> immediate play.
+  await import('../design/entry-experience/src/styles.css');await import('./entry-integration.css');
+  entry=createEntryExperience(entryHost,{onStart:startReadyGame,onEnter:enterHome,onRetry:retryAsset,onSettingChange(key,value){command({type:'setting',key,value});}});
+  entryRoot.addEventListener('click',()=>{if(page==='ready'&&readyForEntry()&&entry?.getDiagnostics().phase==='home')enterHome();});
+  entryHost.style.setProperty('--text-scale',String(settings.textScale));
+  entryHost.querySelector<HTMLImageElement>('.stage-scene')!.src=`${import.meta.env.BASE_URL}assets/entry/entry-scene.webp`;
+  const textSetting=entryRoot.querySelector<HTMLSelectElement>('[data-setting="text"]')!;textSetting.value=String(settings.textScale);
+  const motionSetting=entryRoot.querySelector<HTMLInputElement>('[data-setting="motion"]')!;motionSetting.checked=settings.reducedMotion;motionSetting.dispatchEvent(new Event('change'));
   window.addEventListener('blur',()=>pause());document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
   show();
   requestAnimationFrame(frame);
-  await loadGame(618,preview==='character'||preview==='scene'?'ready':'home');
+  await loadGame(loadingSeed,preview==='character'||preview==='scene'?'ready':'home');
  }catch(e){host.textContent='';uiRoot.style.pointerEvents='auto';const message=document.createElement('p');message.textContent=`无法启动3D画面：${e instanceof Error?e.message:String(e)}。请使用支持WebGL2的桌面浏览器并启用硬件加速。`;uiRoot.append(message);}
 }
 function frame(now:number){
+ if((page==='playing'||page==='computer')&&requiresLandscapeForTouch(input.touchMode,window.innerWidth,window.innerHeight))pause('手机正式玩法使用横屏。请旋转设备为横屏后继续。');
  const realDelta=(now-last)/1000;last=now;const active=page==='playing'&&!document.hidden;
  metrics.frame(now,active,state.elapsed,`${state.boss.mode}/${state.player.pose}/${state.rules.filter(r=>r.phase==='active').map(r=>r.kind).join('+')||'normal'}`);
  const dt=Math.min(.1,Math.max(0,realDelta));
- if(active){accumulator+=dt;let count=0;while(accumulator>=1/60&&count<6){const f=input.frame();if(f.computerPressed){if(openComputer(state,world,query)){page='computer';input.setEnabled(false);phone=false;accumulator=0;show();break;}state.message='靠近电脑按 F；正在追责或检查时不能打开电脑。';state.messageUntil=state.elapsed+3;}stepGame(state,f,1/60,world,query);accumulator-=1/60;count++;if(state.ending){page='result';input.setEnabled(false);phone=false;break;}}}else accumulator=0;
- if(page==='computer'&&!document.hidden)advanceComputer(state,realDelta);
+ if(active){accumulator+=dt;let count=0;while(accumulator>=1/60&&count<6){const f=input.frame();if(f.computerPressed){if(openComputer(state,world,query)){page='computer';computerLast=now;input.setEnabled(false);phone=false;accumulator=0;show();break;}state.message='靠近电脑按 F；正在追责或检查时不能打开电脑。';state.messageUntil=state.elapsed+3;}stepGame(state,f,1/60,world,query);accumulator-=1/60;count++;if(state.ending){page='result';input.setEnabled(false);phone=false;break;}}}else accumulator=0;
+ if(page==='computer'&&!document.hidden){const computerDelta=Math.max(0,(now-computerLast)/1000);computerLast=now;advanceComputer(state,computerDelta);}
  audioObserver.update(state,world,query,!document.hidden&&['playing','computer','result'].includes(page));
  if(!['loading','ready','error'].includes(page))scene.render(state,input.yaw,input.pitch,page,dt);
  uiAccumulator+=dt;if(uiAccumulator>=.08||page!=='playing'){show();uiAccumulator=0;}
  requestAnimationFrame(frame);
 }
 // Read-only diagnostics are available for transparent validation. No production teleport/win commands.
-Object.defineProperty(window,'__OFFICE__',{value:{getSnapshot:()=>JSON.parse(JSON.stringify({page,state,world,version,visuals:scene?.getRuleVisuals()})),getAudio:()=>audio.getDiagnostics(),getLoading:()=>loadingScreen?.getDiagnostics(),getComputerAvailable:()=>availableComputer(state,world,query),getCharacterDiagnostics:()=>scene?.getCharacterDiagnostics(state),getPerformance:()=>({...metrics.report(),device:scene?.getMetrics(),userAgent:navigator.userAgent,quality:settings.quality,version}),resetPerformance:()=>metrics.reset()},configurable:false});
+Object.defineProperty(window,'__OFFICE__',{value:{getSnapshot:()=>JSON.parse(JSON.stringify({page,state,world,version,visuals:scene?.getRuleVisuals()})),getAudio:()=>audio.getDiagnostics(),getLoading:()=>({...entry?.getDiagnostics(),visualAssetsReady}),getComputerAvailable:()=>availableComputer(state,world,query),getCharacterDiagnostics:()=>scene?.getCharacterDiagnostics(state),getPerformance:()=>({...metrics.report(),device:scene?.getMetrics(),userAgent:navigator.userAgent,quality:settings.quality,version}),resetPerformance:()=>metrics.reset()},configurable:false});
 void boot();
