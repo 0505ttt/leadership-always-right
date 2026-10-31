@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { GameState, Room, StaticDecorationCollider, Vec2, Wall, WorldDef } from '../contracts/game';
 import { VisualResourcePool, makeLabel } from './visual-utils';
 import { RoomDecorationKit } from './room-decoration-kit';
+import { batchStaticRoomDecorations } from './static-batch';
 
 export type RoomDecorationModelId = 'printer-v1' | 'storage-shelf-v1' | 'mug-v1' | 'paper-stack-v1' | 'stationery-v1' | 'water-station-v1' | 'box-v1' | 'plant-v1';
 export interface RoomDecorationCollider extends StaticDecorationCollider { yaw: number; note: string }
@@ -20,6 +21,7 @@ export interface RoomDecorationDiagnostics {
   wallAttachments: { id: string; roomId: number; wallId: string; position: [number, number, number]; width: number; height: number }[];
   focusPoints: readonly DecorationFocusPoint[];
   violations: string[];
+  staticBatches?: { sourceMeshes: number; mergedMeshes: number };
 }
 export interface RoomDecorations {
   readonly root: THREE.Group;
@@ -520,7 +522,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       { id: 'rug', object: kit.rug(isGrowth ? 3.4 : 3.0, 2.35), spec: { w: isGrowth ? 3.4 : 3.0, d: 2.35, h: .014, visualOnly: true, note: '部门组团薄地毯，纯视觉。' }, offset: { x: .25, z: .35 } },
     ], preferred);
     for (const desk of world.desks.filter(item => item.roomId === room.id && !item.home)) {
-      const tag = new THREE.Group(); tag.name = `desk-department:${desk.id}`; tag.position.set(desk.x, .75, desk.z); tag.rotation.y = desk.yaw; tag.userData.visualOnly = true;
+      const tag = new THREE.Group(); tag.name = `desk-department:${desk.id}`; tag.position.set(desk.x, .75, desk.z); tag.rotation.y = desk.yaw; tag.userData.visualOnly = true; tag.userData.dynamicDecoration = true;
       const label = makeLabel(pool, copy.short, { width: .66, height: .12, foreground: '#e8dfc7', background: '#3b5145', fontSize: 46 });
       label.position.set(0, -.13, -.435); label.rotation.y = Math.PI; tag.add(label); root.add(tag); deskTags.set(desk.id, tag);
     }
@@ -536,6 +538,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
         frame.position.set(wall.x, room.pressure ? 1.02 : 1.42, wall.z + normalZ * (wall.d / 2 + .018));
         frame.rotation.y = normalZ > 0 ? 0 : Math.PI;
         frame.userData.visualOnly = true;
+        frame.userData.dynamicDecoration = true;
         const front = side === 1;
         const lines = front ? [copy.title, ...copy.lines] : copy.pin;
         const sign = kit.sign({ text: lines.join('\n'), width: Math.min(2.55, wall.w - .2), height: .82, lines, fontSize: 48, foreground: front ? '#3b4a40' : '#40392c', background: front ? '#dde1d4' : '#9f8059', frame: true });
@@ -572,6 +575,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     if (Math.abs(collider.x - room.x) + collider.w / 2 > room.w / 2 + .001 || Math.abs(collider.z - room.z) + collider.d / 2 > room.d / 2 + .001) violations.push(`${collider.id} 落地家具超出房间边界`);
   }
 
+  const staticBatches = batchStaticRoomDecorations(root, pool);
   return {
     root,
     decorationColliders: colliders,
@@ -610,7 +614,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       return {
         rooms: world.rooms.map(room => ({ roomId: room.id, name: room.name, kind: room.kind, ...roomStats.get(room.id)! })),
         skipped: [...skipped], missingModels: [...missingModels], materials: Object.values(kit.materials).map(material => material.name), colliders,
-        wallAttachments: wallAttachments.map(item => ({ ...item, position: [...item.position] })), focusPoints, violations: currentViolations,
+        wallAttachments: wallAttachments.map(item => ({ ...item, position: [...item.position] })), focusPoints, violations: currentViolations, staticBatches,
       };
     },
     dispose() { root.removeFromParent(); pool.dispose(); },
