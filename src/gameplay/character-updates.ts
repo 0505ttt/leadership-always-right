@@ -1,15 +1,14 @@
 import type { CharacterPoseInput, CharacterVisual } from '../presentation/characters';
 
 /**
- * The current stationary working pose has no time-driven animation. Reuse its
- * solved local rig while allowing the control root to move or turn. All other
- * poses, including crouching and rolling, retain their full per-frame update.
- * Revisit this opt-in if the visual component adds time-driven working motion.
+ * Reuse the solved ordinary seated rig while allowing its control root to move.
+ * The caller marks animated working poses and transitions with dynamicWorking;
+ * those, plus all non-working poses, retain their per-frame animation update.
  */
-export function createCharacterUpdater(visual: Pick<CharacterVisual, 'root' | 'update'>): (input: CharacterPoseInput) => void {
+export function createCharacterUpdater<T extends CharacterPoseInput>(visual: Pick<CharacterVisual, 'root'> & {update(input:T):void}, dynamicWorking:(input:T)=>boolean=()=>false): (input: T) => void {
   let lastWorkingKey: string | null = null;
   return input => {
-    const stationaryWorking = input.pose === 'working' && !input.moving && !input.sprint && !input.gesturing;
+    const stationaryWorking = input.pose === 'working' && !input.moving && !input.sprint && !input.gesturing && !dynamicWorking(input);
     if (!stationaryWorking) {
       lastWorkingKey = null;
       visual.update(input);

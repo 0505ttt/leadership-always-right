@@ -218,7 +218,7 @@ function dressRoom(parent: THREE.Object3D, pool: VisualResourcePool, m: Environm
 }
 
 /** Complete static office shell and seeded dressing. Topology and solid positions come only from WorldDef. */
-export function createOfficeEnvironment(world: WorldDef, options: { lighting?: boolean; models?:(id:'computer-set-v1'|'plant-v1')=>THREE.Object3D|undefined } = {}): OfficeEnvironment {
+export function createOfficeEnvironment(world: WorldDef, options: { lighting?: boolean; dressing?: boolean; models?:(id:'computer-set-v1'|'plant-v1')=>THREE.Object3D|undefined } = {}): OfficeEnvironment {
   const pool = new VisualResourcePool();
   const m = palette(pool);
   const root = new THREE.Group();
@@ -279,7 +279,7 @@ export function createOfficeEnvironment(world: WorldDef, options: { lighting?: b
     switchLabel.position.set(0, -.055, .105);
     switchGroup.add(switchLabel);
     root.add(switchGroup);
-    dressRoom(root, pool, m, world, room, decorationColliders);
+    if(options.dressing!==false) dressRoom(root, pool, m, world, room, decorationColliders);
   }
 
   for (const door of world.doors) {

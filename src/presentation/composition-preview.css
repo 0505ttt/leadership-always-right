@@ -1,0 +1,9 @@
+.composition-preview .asset-gallery__tabs button { align-items: flex-start; line-height: 1.5; }
+.composition-preview .asset-gallery__tabs small { display: block; margin-top: 4px; color: #cbd2b7; font-size: 9px; opacity: .58; }
+.composition-preview .asset-gallery__info dd { overflow-wrap: anywhere; }
+.composition-preview__status { margin: 18px 0 0; padding: 12px 14px; border-left: 3px solid #d89a52; background: #d89a520d; color: #e6ddc7; font-size: 11px; line-height: 1.8; }
+.composition-preview__status[data-tone="warning"] { border-color: #c9796b; background: #c9796b10; }
+.composition-preview__candidate { display: inline-block; margin-top: 12px; padding: 5px 8px; border: 1px solid #d89a5266; color: #d89a52; font: 10px/1.4 'SFMono-Regular', Consolas, monospace; }
+@media (max-width: 1050px) {
+  .composition-preview .asset-gallery__tabs small { display: none; }
+}

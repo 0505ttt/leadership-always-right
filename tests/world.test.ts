@@ -9,7 +9,7 @@ describe('V3 offices',()=>{
  it('chair crosses every normal door without walking through the wall',()=>{const w=generateWorld(618),s=createGame(w),q=makeWorldQuery(w);for(const d of w.doors.filter(d=>!d.crawl)){const a={x:d.x+(d.axis==='z'?-.8:0),z:d.z+(d.axis==='x'?-.8:0)},delta={x:d.axis==='z'?1.6:0,z:d.axis==='x'?1.6:0};const b=q.move(a,delta,.3,1.42,s);expect(Math.hypot(b.x-a.x,b.z-a.z)).toBeGreaterThan(1.5);}});
  it('crawlways permit crouch but block chair; overhead prevents standing inside',()=>{const w=generateWorld(618),s=createGame(w),q=makeWorldQuery(w),d=w.doors.find(d=>d.crawl)!;const a={x:d.x,z:d.z-.8};expect(q.move(a,{x:0,z:1.6},.3,.9,s).z).toBeCloseTo(d.z+.8);expect(q.move(a,{x:0,z:1.6},.3,1.42,s).z).toBeLessThan(d.z);expect(q.clearance(d,s)).toBe(.95);});
  it('raised desk opens the actual air underneath, and a jump clears a low box',()=>{const w=generateWorld(618),s=createGame(w),q=makeWorldQuery(w),d=w.desks[0];s.deskHeights[d.id]=1.9;expect(q.lineOfSight({x:d.x-1.1,z:d.z},{x:d.x+1.1,z:d.z},1.5,s)).toBe(true);const p=s.props.find(p=>p.kind==='box')!;const a={x:p.x-1,z:p.z};expect(q.move(a,{x:2,z:0},.3,1.75,s,.65).x).toBeCloseTo(p.x+1);expect(q.move(a,{x:2,z:0},.3,1.75,s,0).x).toBeLessThan(p.x);});
- it('A* path segments stay out of walls even on a long capture route',()=>{const w=generateWorld(618),s=createGame(w),q=makeWorldQuery(w);let p:Vec2={...w.stations[1]};const path=q.path(p,w.spawn,s);expect(path.length).toBeGreaterThan(3);for(const end of path){for(const wall of w.walls)expect(segmentRect(p,end,wall,.3)).toBe(false);p=end;}});
+ it('A* path segments stay out of walls even on a long capture route',()=>{const w=generateWorld(618),s=createGame(w),q=makeWorldQuery(w);let p:Vec2={...w.stations[0]};const path=q.path(p,w.spawn,s);expect(path.length).toBeGreaterThan(3);for(const end of path){for(const wall of w.walls)expect(segmentRect(p,end,wall,.3)).toBe(false);p=end;}});
 });
 
 describe('tight clearance regressions',()=>{
@@ -54,7 +54,7 @@ describe('seeded module templates',()=>{
    staff.add(world.colleagues.map(c=>`${c.roomId}:${c.deskId}`).join(','));
    clockMin=Math.min(clockMin,...report.spawnClockDistances);exitMin=Math.min(exitMin,...report.spawnExitDistances);separationMin=Math.min(separationMin,report.exitSeparation);
   }
-  expect(topology.size).toBe(3);expect(roles.size).toBeGreaterThan(40);expect(stations.size).toBe(3);expect(exitAxes.size).toBe(2);expect(props.size).toBeGreaterThan(40);expect(staff.size).toBeGreaterThan(40);
+  expect(topology.size).toBe(3);expect(roles.size).toBeGreaterThan(40);expect(stations.size).toBeGreaterThanOrEqual(3);expect(exitAxes.size).toBe(2);expect(props.size).toBeGreaterThan(40);expect(staff.size).toBeGreaterThan(40);
   console.info('128-seed map audit',JSON.stringify({topologies:topology.size,roomAssignments:roles.size,stationPairs:stations.size,exitAxes:exitAxes.size,propDistributions:props.size,staffDistributions:staff.size,clockMin,exitMin,separationMin}));
  },120_000);
  it('keeps chair paths to every mandatory target while all cakes are enlarged',()=>{

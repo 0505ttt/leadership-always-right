@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#26352f" />
+    <title>甩锅有限公司｜房间美术巡查</title>
+    <link rel="stylesheet" href="/src/presentation/room-decoration-preview.css" />
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="scene" aria-label="十个房间的真实三维装饰预览"></canvas>
+      <header class="masthead">
+        <div class="brand-mark" aria-hidden="true">甩</div>
+        <div><p class="eyebrow">ROOM ART INSPECTION · 618</p><h1>甩锅有限公司 <span>房间美术巡查</span></h1></div>
+        <p class="slogan">把规矩立住，才不烧心</p>
+      </header>
+      <aside class="inspector" aria-label="巡房控制">
+        <div class="panel-heading"><span>房间索引</span><small>10 个真实边界</small></div>
+        <nav id="room-list" class="room-list"></nav>
+        <div class="panel-heading view-heading"><span>观看方式</span><small>快捷键 1—4</small></div>
+        <div id="view-list" class="view-list">
+          <button data-view="game" class="active">游戏视角 <kbd>1</kbd></button>
+          <button data-view="sign">标牌近景 <kbd>2</kbd></button>
+          <button data-view="material" data-material="solid">家具材质 <kbd>3</kbd></button>
+          <button data-view="material" data-material="surface">墙饰材质</button>
+          <button data-view="overview">房间总览 <kbd>4</kbd></button>
+        </div>
+        <button id="tour" class="tour-button">开始连续巡房 <span>SPACE</span></button>
+        <div class="state-buttons">
+          <button id="transparency">透明墙检查</button><button id="raise">升桌检查</button>
+        </div>
+        <p class="mouse-hint">拖拽旋转 · 滚轮缩放 · ← → 切换房间</p>
+      </aside>
+      <section class="room-caption" aria-live="polite">
+        <p id="room-index" class="eyebrow"></p><h2 id="room-name"></h2><p id="room-description"></p>
+        <div id="room-stats" class="room-stats"></div>
+      </section>
+      <div class="scale-note">单位：米 · 人物参考高度 1.62 · 家具真实尺寸</div>
+      <div id="loading" class="loading"><div class="loading-card"><span class="loading-stamp"> ROOM FIT-OUT </span><h2>正在把规矩立起来</h2><p id="loading-detail">加载既有模型与材质…</p><div class="loading-line"></div></div></div>
+      <div id="error" class="error" hidden></div>
+    </main>
+    <script type="module" src="/src/presentation/room-decoration-preview.ts"></script>
+  </body>
+</html>

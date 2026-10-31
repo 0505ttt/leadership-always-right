@@ -4,6 +4,7 @@ import { checkEscape, updateInteraction, updatePlayer } from './player';
 import { handleObjectInput, updateObjects } from './objects';
 import { updateBoss, updateColleagues, updateDrag } from './boss';
 import { updateEnvironment } from './environment';
+import { deskWorkingPoint } from '../world/workstations';
 
 export { playerHeight } from './runtime';
 
@@ -11,8 +12,8 @@ export function createGame(world:WorldDef):GameState {
   const home=world.desks.find(desk=>desk.home);
   const holders=[...world.colleagues.filter(colleague=>colleague.pot),...world.colleagues.filter(colleague=>!colleague.pot)].slice(0,2);
   const state:GameState={
-    seed:world.seed,elapsed:0,remaining:600,ending:null,clocked:false,openedExits:[],
-    player:{...world.spawn,y:0,vy:0,yaw:home?.yaw??0,pose:'working',sticky:false,stamina:4,potId:null,holding:null,potInHand:false,protection:0,crouchIntent:false,moving:false,sprinting:false},
+    inspection:null,companySeconds:0,computer:null,seed:world.seed,elapsed:0,remaining:600,ending:null,clocked:false,openedExits:[],
+    player:{...(home?deskWorkingPoint(home):world.spawn),y:0,vy:0,yaw:home?.yaw??0,pose:'working',workstationId:home?.id??null,workStance:'seated',sticky:false,stamina:4,potId:null,holding:null,potInHand:false,protection:0,crouchIntent:false,moving:false,sprinting:false},
     boss:{...world.bossSpawn,yaw:0,mode:'patrol',lastSeen:null,evidenceUntil:0,evidenceId:null,seenFor:0,contactFor:0,searchFor:0,path:[],patrolIndex:0},
     pots:holders.map((holder,index)=>({id:`pot-${index}`,owner:holder.id,phase:'attached',cooldown:0,progress:0,from:{x:holder.x,z:holder.z},to:{x:holder.x,z:holder.z},targetId:null})),
     props:world.props.map(prop=>({...prop,held:false,large:false,scale:1,y:0})),
@@ -32,7 +33,7 @@ const complaints=['只要我还在动，就不算原地加班。','领导说得�
 
 /** Called only while the application is playing. Pausing stops this clock and every rule together. */
 export function stepGame(state:GameState,input:InputFrame,dt:number,world:WorldDef,query:WorldQuery):void {
-  if(state.ending||!Number.isFinite(dt)||dt<=0)return;
+  if(state.computer||state.ending||!Number.isFinite(dt)||dt<=0)return;
   const timeLeft=Math.max(0,600-state.elapsed);
   if(timeLeft===0){state.elapsed=600;state.remaining=0;state.ending='overtime';logEvent(state,'ending:overtime');return;}
   // Bound both stalled-tab catch-up and the final partial frame to playable time.

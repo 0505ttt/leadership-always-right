@@ -1,0 +1,561 @@
+{
+  "manifestVersion": "kimi-props-final-2026-10-31-v1",
+  "recordedAt": "2026-10-31",
+  "scope": "《领导说的都是真的》通用道具资产收尾；14件可接入或沿用道具，另附1件只读角色参考；不含主场景、地图、角色修改、共享资源总清单或整局验收",
+  "rootConvention": "所有相对路径均相对于工程根目录 leadership-always-right （目录名末尾有空格）",
+  "units": "m",
+  "coordinateConvention": {
+    "sizeOrder": "X-width × Y-height × Z-depth",
+    "up": "+Y",
+    "front": "+Z",
+    "origin": "bottom-center",
+    "runtimeScale": "按保存后的GLB以1:1接入，不再次归一化；如改缩放须重新测量并复核"
+  },
+  "runtimeUrlConvention": "Vite以public/为静态根；运行URL省略public/前缀",
+  "summary": {
+    "propCount": 14,
+    "codexPreviouslyReportedIntegratedCount": 6,
+    "pendingCodexIntegrationCount": 8,
+    "characterReferenceCount": 1,
+    "newGenerationTasksInFinalPass": 0,
+    "additionalTripoCreditsInFinalPass": 0,
+    "readOnlyAudit": "docs/kimi/verification/final-asset-audit.json",
+    "readOnlyAuditStatus": "passed-read-only-audit",
+    "sha256Matched": "15/15（14件道具+1件角色参考）",
+    "mainGameVisualAcceptance": "not-verified-in-this-delivery",
+    "gameplayAcceptance": "not-verified-in-this-delivery"
+  },
+  "integrationContract": {
+    "owner": "Codex统一装配、资源映射、碰撞、实例数量、通路、互动、整局与发布验收",
+    "runtimeKeySuggestion": "原有六件沿用原ID；office-props目录的八件建议使用 office-props/<assetId> 作为资源键，避免同名历史Tripo文件歧义",
+    "sharedInterfaceChangesRequested": [],
+    "note": "本清单不要求修改共享接口。若Codex现有适配器需要新字段或新语义，请先列明变更再由Codex统一整合；本会话未修改props.ts、visual-utils.ts、main、scene、地图、状态或共享manifest.json。",
+    "clockStationRule": "全局仅一个打卡机是Codex实例配置；沿用同一个clock-station-v1模型，不重新生成。",
+    "roomDressingBoundary": "房间装饰组合由另一会话负责；本清单只提供通用道具及建议，不确定最终房间摆设。"
+  },
+  "replacementRelations": [
+    {
+      "logicalAsset": "cake",
+      "adopt": "public/assets/office-props/cake-v2.glb",
+      "supersedes": "public/assets/tripo/cake-v1.glb",
+      "history": "cake-v1保留含需求外餐盘的历史候选评价；cake-v2从原Tripo源删除945个餐盘三角面，不重新生成。"
+    },
+    {
+      "logicalAsset": "exit-door-v1",
+      "adopt": "public/assets/office-props/exit-door-v1.glb",
+      "supersedes": "原Tripo同ID源模型（未导出运行版）",
+      "history": "原Tripo缺上方空白标牌包络而不采用；程序替代件完整保留标牌、门框和推杆。"
+    },
+    {
+      "logicalAsset": "printer-v1",
+      "adopt": "public/assets/office-props/printer-v1.glb",
+      "supersedes": "原Tripo同ID源模型（未导出运行版）",
+      "history": "原Tripo实际为落地复印机而不采用；程序替代件为桌面打印机。"
+    },
+    {
+      "logicalAsset": "storage-shelf-v1",
+      "adopt": "public/assets/office-props/storage-shelf-v1.glb",
+      "supersedes": "public/assets/tripo/storage-shelf-v1.glb",
+      "history": "原Tripo运行版保留窄单跨候选评价；程序替代件为三跨五层、2.10×1.82×0.28米宽浅架。"
+    }
+  ],
+  "excludedFromIntegration": [
+    "public/assets/tripo/cake-v1.glb（历史候选，由cake-v2替代）",
+    "public/assets/tripo/storage-shelf-v1.glb（历史候选，由程序storage-shelf-v1替代）",
+    "原Tripo exit-door-v1 与 printer-v1 源模型（历史不采用；不得以旧404或旧流程失败否定已完成的程序替代件）"
+  ],
+  "assets": [
+    {
+      "assetId": "pot-v1",
+      "revision": "tripo-v1",
+      "status": "retained-approved-independent-preview",
+      "runtime": {
+        "path": "public/assets/tripo/pot-v1.glb",
+        "url": "assets/tripo/pot-v1.glb",
+        "bytes": 2398416,
+        "sha256": "ad2da9f9753c2a94afa0e776a761b393a77d7d9c13b71b52addcd07f44818a01",
+        "sizeMeters": [0.45, 0.196, 0.353],
+        "triangleCount": 3656,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "3张内嵌2048×2048纹理：Color JPEG、ORM JPEG、NormalGL PNG"
+      },
+      "generation": {
+        "method": "Tripo",
+        "taskId": "a3b71fea-e22d-4a58-adbf-a3e0105e9950",
+        "sourcePath": "assets/source/tripo/pot-v1/v1/source.glb",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z",
+      "footprintMeters": [0.45, 0.353],
+      "placement": "保持独立锅模型；世界位置、手持/背挂/头顶挂点及投掷由Codex绑定，不把锅焊入角色。",
+      "collisionAdvice": "视觉包络仅供核对；碰撞、挂点与投掷使用Codex权威简化体，不把双柄细节做成独立碰撞。",
+      "verification": {
+        "independentVisualReview": "passed",
+        "report": "docs/kimi/verification/assets/report.json",
+        "contactSheet": null,
+        "captures": ["docs/kimi/verification/assets/pot-v1-front.png", "docs/kimi/verification/assets/pot-v1-side.png", "docs/kimi/verification/assets/pot-v1-back.png", "docs/kimi/verification/assets/pot-v1-perspective.png", "docs/kimi/verification/assets/pot-v1-runtime-front.png", "docs/kimi/verification/assets/pot-v1-runtime-back.png"]
+      },
+      "mainGame": {"status": "codex-reported-integrated-not-reverified-here", "reportedIntegrated": true, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "chair-v1",
+      "revision": "tripo-v1",
+      "status": "retained-approved-independent-preview",
+      "runtime": {
+        "path": "public/assets/tripo/chair-v1.glb",
+        "url": "assets/tripo/chair-v1.glb",
+        "bytes": 4140944,
+        "sha256": "add8d12b3a3bac79d1c5ff4e2c5a84db804db1a0612cf65812f43ea05e38d215",
+        "sizeMeters": [0.749, 1.1, 0.725],
+        "triangleCount": 7360,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "3张内嵌2048×2048纹理：Color JPEG、ORM JPEG、NormalGL PNG"
+      },
+      "generation": {
+        "method": "Tripo",
+        "taskId": "c61a6271-eddd-465c-bcd4-d27089ff08f2",
+        "sourcePath": "assets/source/tripo/chair-v1/v1/source.glb",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z",
+      "footprintMeters": [0.749, 0.725],
+      "placement": "底部落地，椅背朝-Z；人物坐姿、滚椅状态与重复静态椅隐藏由Codex/角色会话处理。",
+      "collisionAdvice": "沿用Codex既有滚椅权威外轮廓和移动碰撞；不以五星脚、滚轮或扶手分别建碰撞，不修改玩法尺寸。",
+      "verification": {
+        "independentVisualReview": "passed",
+        "report": "docs/kimi/verification/assets/report.json",
+        "contactSheet": null,
+        "captures": ["docs/kimi/verification/assets/chair-v1-front.png", "docs/kimi/verification/assets/chair-v1-side.png", "docs/kimi/verification/assets/chair-v1-back.png", "docs/kimi/verification/assets/chair-v1-perspective.png", "docs/kimi/verification/assets/chair-v1-runtime-front.png", "docs/kimi/verification/assets/chair-v1-runtime-back.png"]
+      },
+      "mainGame": {"status": "codex-reported-integrated-not-reverified-here", "reportedIntegrated": true, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "computer-set-v1",
+      "revision": "tripo-v1",
+      "status": "retained-approved-independent-preview",
+      "runtime": {
+        "path": "public/assets/tripo/computer-set-v1.glb",
+        "url": "assets/tripo/computer-set-v1.glb",
+        "bytes": 885264,
+        "sha256": "6c27560c9016a836db59362c029b99f48ccea92281ecdf3703f90197fba6c8d9",
+        "sizeMeters": [0.8, 0.5, 0.45],
+        "triangleCount": 5681,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "1张内嵌2048×2048 Color JPEG；1个OPAQUE材质"
+      },
+      "generation": {
+        "method": "Tripo",
+        "taskId": "fa50cabc-9e79-4548-8c2e-1720f6d677c8",
+        "modelVersion": "v3.1-20260211",
+        "sourcePath": "assets/source/tripo/computer-set-v1/v1/tripo-out/computer-set-v1-fa50cabc/model.glb",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（屏幕、键盘与鼠标操作面）",
+      "footprintMeters": [0.8, 0.45],
+      "placement": "底部原点落在桌面，操作面+Z；屏幕文字与双时钟使用独立文字层，禁用重叠的旧程序屏幕。",
+      "collisionAdvice": "桌面设备默认visualOnly；如确需阻挡，以0.80×0.45米占地、0.50米高简化包络处理，保留键鼠操作区。",
+      "verification": {
+        "independentVisualReview": "passed",
+        "report": "docs/kimi/verification/new-props/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/new-props/computer-set-v1-front.png", "docs/kimi/verification/new-props/computer-set-v1-side.png", "docs/kimi/verification/new-props/computer-set-v1-back.png", "docs/kimi/verification/new-props/computer-set-v1-perspective.png"]
+      },
+      "mainGame": {"status": "codex-reported-integrated-not-reverified-here", "reportedIntegrated": true, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "box-v1",
+      "revision": "tripo-v1",
+      "status": "retained-approved-independent-preview",
+      "runtime": {
+        "path": "public/assets/tripo/box-v1.glb",
+        "url": "assets/tripo/box-v1.glb",
+        "bytes": 607980,
+        "sha256": "e66c1f7668aaddf2c7385b93502896157d7a5533363f2c7e96e242851e706105",
+        "sizeMeters": [0.55, 0.55, 0.55],
+        "triangleCount": 4254,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "1张内嵌2048×2048 Color JPEG；1个OPAQUE材质"
+      },
+      "generation": {
+        "method": "Tripo",
+        "taskId": "66999eb5-7a1c-472f-918c-0a9bb1358fbe",
+        "modelVersion": "v3.1-20260211",
+        "sourcePath": "assets/source/tripo/box-v1/v1/tripo-out/box-v1-66999eb5/model.glb",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（对称纸箱可按摆放绕Y旋转）",
+      "footprintMeters": [0.55, 0.55],
+      "placement": "底部落在地面或指定支撑面；封口与纸胶带朝上，无印刷文字，标签由独立层处理。",
+      "collisionAdvice": "若为实体障碍采用0.55米立方简化碰撞；堆叠、交互与通路由Codex决定，不让纸胶带细部驱动碰撞。",
+      "verification": {
+        "independentVisualReview": "passed",
+        "report": "docs/kimi/verification/new-props/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/new-props/box-v1-front.png", "docs/kimi/verification/new-props/box-v1-side.png", "docs/kimi/verification/new-props/box-v1-back.png", "docs/kimi/verification/new-props/box-v1-perspective.png"]
+      },
+      "mainGame": {"status": "codex-reported-integrated-not-reverified-here", "reportedIntegrated": true, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "clock-station-v1",
+      "revision": "tripo-v1",
+      "status": "retained-approved-independent-preview",
+      "runtime": {
+        "path": "public/assets/tripo/clock-station-v1.glb",
+        "url": "assets/tripo/clock-station-v1.glb",
+        "bytes": 570220,
+        "sha256": "e779f28d0d10a346a3e4175ae4d5b80c4950ab2ae1e3388e49db3dab60dc2e8e",
+        "sizeMeters": [0.5, 1.23, 0.36],
+        "triangleCount": 3827,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "1张内嵌2048×2048 Color JPEG；1个OPAQUE材质"
+      },
+      "generation": {
+        "method": "Tripo",
+        "taskId": "1f2530e2-b765-4589-85e3-276e5edf5e45",
+        "modelVersion": "v3.1-20260211",
+        "sourcePath": "assets/source/tripo/clock-station-v1/v1/tripo-out/clock-station-v1-1f2530e2/model.glb",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（空白屏幕与刷卡区）",
+      "footprintMeters": [0.5, 0.36],
+      "placement": "底部落地，操作面+Z；全局只配置一个实例，时间与提示走独立文字层。",
+      "collisionAdvice": "占地参考0.50×0.36米、高1.23米；由Codex用实际Box3和唯一实例配置统一碰撞，保留操作侧与巡逻/通路净空。",
+      "verification": {
+        "independentVisualReview": "passed",
+        "report": "docs/kimi/verification/new-props/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/new-props/clock-station-v1-front.png", "docs/kimi/verification/new-props/clock-station-v1-side.png", "docs/kimi/verification/new-props/clock-station-v1-back.png", "docs/kimi/verification/new-props/clock-station-v1-perspective.png"]
+      },
+      "mainGame": {"status": "codex-reported-integrated-not-reverified-here", "reportedIntegrated": true, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "plant-v1",
+      "revision": "tripo-v1",
+      "status": "retained-approved-independent-preview",
+      "runtime": {
+        "path": "public/assets/tripo/plant-v1.glb",
+        "url": "assets/tripo/plant-v1.glb",
+        "bytes": 636508,
+        "sha256": "e06fcfd3ec4baea3a90a912515fe812f6e9b6f72aa73330f2a842178a15db6ba",
+        "sizeMeters": [0.34, 1.15, 0.34],
+        "triangleCount": 4652,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "1张内嵌2048×2048 Color JPEG；1个OPAQUE材质"
+      },
+      "generation": {
+        "method": "Tripo",
+        "taskId": "e4940563-2a98-4ff2-b9ed-16b3c3fc4c94",
+        "modelVersion": "v3.1-20260211",
+        "sourcePath": "assets/source/tripo/plant-v1/v1/tripo-out/plant-v1-e4940563/model.glb",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（近对称株型可绕Y调整）",
+      "footprintMeters": [0.34, 0.34],
+      "placement": "底部落地，按0.34米最大宽深选择不侵占门、主路、座位与镜头的位置。",
+      "collisionAdvice": "若需要实体阻挡，以实际0.34×0.34米包络或盆体简化体为准；叶片可仅作视觉，最终由Codex统一登记。",
+      "verification": {
+        "independentVisualReview": "passed",
+        "report": "docs/kimi/verification/new-props/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/new-props/runtime-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/new-props/plant-v1-front.png", "docs/kimi/verification/new-props/plant-v1-side.png", "docs/kimi/verification/new-props/plant-v1-back.png", "docs/kimi/verification/new-props/plant-v1-perspective.png"]
+      },
+      "mainGame": {"status": "codex-reported-integrated-not-reverified-here", "reportedIntegrated": true, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "exit-door-v1",
+      "revision": "procedural-v1",
+      "status": "approved-replacement-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/exit-door-v1.glb",
+        "url": "assets/office-props/exit-door-v1.glb",
+        "bytes": 942616,
+        "sha256": "4c21ab5d05914bcc5e82b65b75b01bacdc0cff46953ba0ecfa09b358b2170b77",
+        "sizeMeters": [2.18, 2.28, 0.12],
+        "triangleCount": 9340,
+        "meshPrimitiveCount": 5,
+        "materialCount": 5,
+        "textureSummary": "2张内嵌128×128程序PNG微纹理；PBR参数材质"
+      },
+      "generation": {
+        "method": "procedural-three.js",
+        "taskId": null,
+        "editableSource": "docs/kimi/office-prop-factory.js",
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z",
+      "footprintMeters": [2.18, 0.12],
+      "placement": "底部中心落在门洞地面，正面+Z；2.28米总高已含门框和上方空白标牌，标牌文字独立。",
+      "collisionAdvice": "门洞、开关和通路服从Codex世界契约；不得把门框、门扇和上方标牌合并成一个封死门洞的AABB。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/repair/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/repair/exit-door-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/repair/exit-door-v1-runtime-front.png", "docs/kimi/verification/office-props/repair/exit-door-v1-runtime-side.png", "docs/kimi/verification/office-props/repair/exit-door-v1-runtime-back.png", "docs/kimi/verification/office-props/repair/exit-door-v1-runtime-perspective.png", "docs/kimi/verification/office-props/repair/exit-door-v1-runtime-close.png", "docs/kimi/verification/office-props/repair/exit-door-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "printer-v1",
+      "revision": "procedural-v1",
+      "status": "approved-replacement-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/printer-v1.glb",
+        "url": "assets/office-props/printer-v1.glb",
+        "bytes": 574800,
+        "sha256": "337a55c9bd915bbee4769cb9a6f94d9cf28f1aa751250627a87c49d38a3e704b",
+        "sizeMeters": [0.62, 0.3, 0.42],
+        "triangleCount": 5476,
+        "meshPrimitiveCount": 8,
+        "materialCount": 8,
+        "textureSummary": "2张内嵌128×128程序PNG微纹理；PBR参数材质"
+      },
+      "generation": {"method": "procedural-three.js", "taskId": null, "editableSource": "docs/kimi/office-prop-factory.js", "additionalCreditsInFinalPass": 0},
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（出纸与操作面）",
+      "footprintMeters": [0.62, 0.42],
+      "placement": "底部原点落在柜面而非地面；建议柜深至少0.45米，独立预览使用0.55米，屏幕文字独立。",
+      "collisionAdvice": "默认柜面装饰；如需实体阻挡采用0.62×0.42米占地、0.30米高简化体，不能沿用旧落地复印机位置。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/repair/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/repair/printer-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/repair/printer-v1-runtime-front.png", "docs/kimi/verification/office-props/repair/printer-v1-runtime-side.png", "docs/kimi/verification/office-props/repair/printer-v1-runtime-back.png", "docs/kimi/verification/office-props/repair/printer-v1-runtime-perspective.png", "docs/kimi/verification/office-props/repair/printer-v1-runtime-close.png", "docs/kimi/verification/office-props/repair/printer-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "storage-shelf-v1",
+      "revision": "procedural-v1",
+      "status": "approved-replacement-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/storage-shelf-v1.glb",
+        "url": "assets/office-props/storage-shelf-v1.glb",
+        "bytes": 2516340,
+        "sha256": "2e56e735bf1a7fc48ef8c1fde297dc71371e48f9202d4b633a0c2b52d47826cb",
+        "sizeMeters": [2.1, 1.82, 0.28],
+        "triangleCount": 25672,
+        "meshPrimitiveCount": 11,
+        "materialCount": 11,
+        "textureSummary": "2张内嵌128×128程序PNG微纹理；PBR参数材质"
+      },
+      "generation": {"method": "procedural-three.js", "taskId": null, "editableSource": "docs/kimi/office-prop-factory.js", "additionalCreditsInFinalPass": 0},
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z",
+      "footprintMeters": [2.1, 0.28],
+      "placement": "正面+Z、背部-Z贴墙；保持三跨五层宽浅比例，不拉伸成旧窄单跨架。",
+      "collisionAdvice": "落地占地参考2.10×0.28米、高1.82米；使用整体简化体而非每个档案盒碰撞，并复核门、通路和镜头间距。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/repair/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/repair/storage-shelf-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/repair/storage-shelf-v1-runtime-front.png", "docs/kimi/verification/office-props/repair/storage-shelf-v1-runtime-side.png", "docs/kimi/verification/office-props/repair/storage-shelf-v1-runtime-back.png", "docs/kimi/verification/office-props/repair/storage-shelf-v1-runtime-perspective.png", "docs/kimi/verification/office-props/repair/storage-shelf-v1-runtime-close.png", "docs/kimi/verification/office-props/repair/storage-shelf-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "mug-v1",
+      "revision": "procedural-v1",
+      "status": "approved-addition-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/mug-v1.glb",
+        "url": "assets/office-props/mug-v1.glb",
+        "bytes": 208852,
+        "sha256": "2cd77d9923e2cff5187c243ed63f953c9c4fde5dba698f5094da177ab00b99ac",
+        "sizeMeters": [0.1474, 0.125, 0.098],
+        "triangleCount": 1936,
+        "meshPrimitiveCount": 2,
+        "materialCount": 2,
+        "textureSummary": "1张内嵌128×128程序PNG微纹理；陶瓷与咖啡PBR材质"
+      },
+      "generation": {"method": "procedural-three.js", "taskId": null, "editableSource": "docs/kimi/office-prop-factory.js", "additionalCreditsInFinalPass": 0},
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（杯体可绕Y调整把手方向）",
+      "footprintMeters": [0.1474, 0.098],
+      "placement": "底部落在桌面，完整包络包含把手；避开键盘、鼠标和交互活动区。",
+      "collisionAdvice": "小型桌面装饰建议visualOnly；如未来成为可交互物，再由Codex定义简化碰撞与拾取规则。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/desk/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/desk/mug-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/desk/mug-v1-runtime-front.png", "docs/kimi/verification/office-props/desk/mug-v1-runtime-side.png", "docs/kimi/verification/office-props/desk/mug-v1-runtime-back.png", "docs/kimi/verification/office-props/desk/mug-v1-runtime-perspective.png", "docs/kimi/verification/office-props/desk/mug-v1-runtime-close.png", "docs/kimi/verification/office-props/desk/mug-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "paper-stack-v1",
+      "revision": "procedural-v1",
+      "status": "approved-addition-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/paper-stack-v1.glb",
+        "url": "assets/office-props/paper-stack-v1.glb",
+        "bytes": 235916,
+        "sha256": "7b2b09f9b002d881753f314c6b85215d5cb27621f0a3d0759701a5d153a224c3",
+        "sizeMeters": [0.32, 0.052, 0.2305],
+        "triangleCount": 1980,
+        "meshPrimitiveCount": 5,
+        "materialCount": 5,
+        "textureSummary": "2张内嵌128×128程序PNG微纹理；PBR参数材质"
+      },
+      "generation": {"method": "procedural-three.js", "taskId": null, "editableSource": "docs/kimi/office-prop-factory.js", "additionalCreditsInFinalPass": 0},
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（可绕Y调整）",
+      "footprintMeters": [0.32, 0.2305],
+      "placement": "底部落在桌面或柜面，0.052米高度已含文件夹、装订夹和回形针，不烘入可读文字。",
+      "collisionAdvice": "桌面装饰建议visualOnly，不增加纸张细部碰撞。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/desk/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/desk/paper-stack-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/desk/paper-stack-v1-runtime-front.png", "docs/kimi/verification/office-props/desk/paper-stack-v1-runtime-side.png", "docs/kimi/verification/office-props/desk/paper-stack-v1-runtime-back.png", "docs/kimi/verification/office-props/desk/paper-stack-v1-runtime-perspective.png", "docs/kimi/verification/office-props/desk/paper-stack-v1-runtime-close.png", "docs/kimi/verification/office-props/desk/paper-stack-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "stationery-v1",
+      "revision": "procedural-v1",
+      "status": "approved-addition-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/stationery-v1.glb",
+        "url": "assets/office-props/stationery-v1.glb",
+        "bytes": 260032,
+        "sha256": "0fc705800131253e34ace7ee292563e69d1845c72c908008a69aa6398683cd78",
+        "sizeMeters": [0.15984, 0.15868, 0.13045],
+        "triangleCount": 2220,
+        "meshPrimitiveCount": 6,
+        "materialCount": 6,
+        "textureSummary": "2张内嵌128×128程序PNG微纹理；PBR参数材质"
+      },
+      "generation": {"method": "procedural-three.js", "taskId": null, "editableSource": "docs/kimi/office-prop-factory.js", "additionalCreditsInFinalPass": 0},
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（可绕Y调整）",
+      "footprintMeters": [0.15984, 0.13045],
+      "placement": "底部落在桌面；保留镂空笔筒、独立文具和桌面散笔，整体包络已包含散笔。",
+      "collisionAdvice": "桌面装饰建议visualOnly；不以实心圆柱替代笔筒，也不添加文具细部碰撞。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/desk/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/desk/stationery-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/desk/stationery-v1-runtime-front.png", "docs/kimi/verification/office-props/desk/stationery-v1-runtime-side.png", "docs/kimi/verification/office-props/desk/stationery-v1-runtime-back.png", "docs/kimi/verification/office-props/desk/stationery-v1-runtime-perspective.png", "docs/kimi/verification/office-props/desk/stationery-v1-runtime-close.png", "docs/kimi/verification/office-props/desk/stationery-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "water-station-v1",
+      "revision": "procedural-v1",
+      "status": "approved-addition-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/water-station-v1.glb",
+        "url": "assets/office-props/water-station-v1.glb",
+        "bytes": 681960,
+        "sha256": "ba2fa274a38a3f4cf77ca654a52e81615d42ed85e8ca0a94b3f1fe2cf70c5c03",
+        "sizeMeters": [0.429, 1.039, 0.4675],
+        "triangleCount": 6584,
+        "meshPrimitiveCount": 9,
+        "materialCount": 9,
+        "textureSummary": "2张内嵌128×128程序PNG微纹理；水桶为半透明BLEND材质，其余为OPAQUE"
+      },
+      "generation": {"method": "procedural-three.js", "taskId": null, "editableSource": "docs/kimi/office-prop-factory.js", "additionalCreditsInFinalPass": 0},
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z（冷热水龙头与接水盘）",
+      "footprintMeters": [0.429, 0.4675],
+      "placement": "底部落在茶水柜面而不是地面；柜面以上保留约1.039米净高，复核上方标牌和层板。",
+      "collisionAdvice": "若需阻挡采用0.429×0.4675米占地、1.039米高简化体；保留龙头操作面，不为水桶和侧杯架单独建碰撞。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/desk/runtime-verification.json",
+        "contactSheet": "docs/kimi/verification/office-props/desk/water-station-v1-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/desk/water-station-v1-runtime-front.png", "docs/kimi/verification/office-props/desk/water-station-v1-runtime-side.png", "docs/kimi/verification/office-props/desk/water-station-v1-runtime-back.png", "docs/kimi/verification/office-props/desk/water-station-v1-runtime-perspective.png", "docs/kimi/verification/office-props/desk/water-station-v1-runtime-close.png", "docs/kimi/verification/office-props/desk/water-station-v1-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    },
+    {
+      "assetId": "cake-v2",
+      "revision": "derived-v2-from-cake-v1-tripo-source",
+      "status": "approved-replacement-independent-six-view-passed",
+      "runtime": {
+        "path": "public/assets/office-props/cake-v2.glb",
+        "url": "assets/office-props/cake-v2.glb",
+        "bytes": 656620,
+        "sha256": "c9f75af83721ebc273219b6c33062aac7781119ebc4d5b9214fa09491cd519e5",
+        "sizeMeters": [0.6, 0.4, 0.6],
+        "triangleCount": 4336,
+        "meshPrimitiveCount": 1,
+        "materialCount": 1,
+        "textureSummary": "保留原Tripo 1张内嵌2048×2048 Color JPEG及UV/法线；1个OPAQUE材质"
+      },
+      "generation": {
+        "method": "derived-from-retained-tripo-source-no-regeneration",
+        "taskId": null,
+        "sourceTaskId": "e4f324ba-0e45-45fe-ad58-7af65aad38d0",
+        "sourcePath": "assets/source/tripo/cake-v1/v1/tripo-out/cake-v1-e4f324ba/model.glb",
+        "sourceSha256": "26ddd1ab8b514eb8d3e1af510d09291ff461a4ed73bafe59d3232272c4aaa43d",
+        "editableSource": "docs/kimi/finalize-cake-v2.py",
+        "removedPlateTriangles": 945,
+        "additionalCreditsInFinalPass": 0
+      },
+      "origin": "bottom-center",
+      "up": "+Y",
+      "front": "+Z",
+      "footprintMeters": [0.6, 0.6],
+      "placement": "底部落在桌面、柜面或Codex指定支撑面；采用无餐盘版本，饼体和同径底部基座保留。",
+      "collisionAdvice": "初始视觉包络0.60×0.60米、高0.40米；交互和碰撞由Codex使用简化体，不保留餐盘碰撞。若玩法缩放，须重新记录实际包络并复核。",
+      "verification": {
+        "independentVisualReview": "passed-six-view",
+        "report": "docs/kimi/verification/office-props/cake-v2/runtime-verification.json",
+        "structuralReport": "docs/kimi/verification/office-props/cake-v2/geometric-filter.json",
+        "contactSheet": "docs/kimi/verification/office-props/cake-v2/cake-v2-contact-sheet.jpg",
+        "captures": ["docs/kimi/verification/office-props/cake-v2/cake-v2-runtime-front.png", "docs/kimi/verification/office-props/cake-v2/cake-v2-runtime-side.png", "docs/kimi/verification/office-props/cake-v2/cake-v2-runtime-back.png", "docs/kimi/verification/office-props/cake-v2/cake-v2-runtime-perspective.png", "docs/kimi/verification/office-props/cake-v2/cake-v2-runtime-close.png", "docs/kimi/verification/office-props/cake-v2/cake-v2-runtime-context.png"]
+      },
+      "mainGame": {"status": "pending-codex-integration", "reportedIntegrated": false, "visualAcceptanceVerified": false, "gameplayVerified": false}
+    }
+  ],
+  "characterReferenceNotModified": {
+    "assetId": "leader-v1",
+    "runtimePath": "public/assets/tripo/leader-v1.glb",
+    "bytes": 3807556,
+    "sha256": "f492513df087a2e6f8300f7703dd99080521f083cdb3d381c5d4bda0b7f1fc26",
+    "sizeMeters": [1.8, 1.85, 0.373],
+    "triangleCount": 11620,
+    "materialCount": 1,
+    "textureSummary": "3张内嵌2048×2048纹理：Color JPEG、ORM JPEG、NormalGL PNG",
+    "jointCount": 65,
+    "animations": ["idle", "walk", "run"],
+    "origin": "bottom-center",
+    "up": "+Y",
+    "front": "+Z",
+    "taskId": "07c93937-226a-4136-97f4-5e695404d9da",
+    "evidence": ["docs/kimi/verification/assets/report.json", "docs/kimi/asset-inspection.json"],
+    "note": "仅供角色会话参考；本会话未修改角色、骨骼、动作、挂点或角色主游戏验收状态。"
+  },
+  "nextAcceptance": {
+    "owner": "Codex",
+    "required": "按本清单装配待接入8件，复核既有6件未回退；回传整层正常游戏视角、近景、实际变换与任何缩放偏差，再进行真实场景视觉复核。",
+    "notClaimed": ["主游戏已经接入全部14件", "真实房间视觉已经验收", "碰撞与通路已经验收", "十分钟整局或公开发布已经验收"]
+  }
+}

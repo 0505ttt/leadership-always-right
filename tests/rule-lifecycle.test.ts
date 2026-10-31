@@ -32,6 +32,7 @@ type Fixture=ReturnType<typeof fixture>;
 function allowOnly(f:Fixture,kinds:RuleKind[],random=0) {
  f.state.elapsed=20;
  const runtime=runtimeFor(f.state);runtime.nextEnvironment=20;runtime.random=()=>random;
+ runtime.lastEnvironment=0; // This focused rule fixture starts after the separately tested cake introduction.
  for(const kind of ['cake','desk','pot','flow','transparent','pressure'] as const)if(!kinds.includes(kind))runtime.lastKinds[kind]=20;
 }
 
@@ -251,9 +252,13 @@ describe('announcement priority and spatial budgets',()=>{
 
  it('respects two spatial slots, one per room, one warning and the 18/50-second spacing throughout a round',()=>{
   const f=fixture(51);const runtime=runtimeFor(f.state);runtime.nextEnvironment=0;
+  // Inspections are real lifecycle owners now; an environment-only clock would
+  // intentionally wait forever for the leader who was never stepped.
+  Object.assign(f.state.player,{...f.world.spawn,pose:'working',workstationId:'home'});
   const announcements:{id:number;kind:RuleKind;at:number}[]=[],seen=new Set<number>();
   for(let frame=0;frame<6000;frame++) {
    advance(f,.1);
+   updateBoss(f.state,.1,f.world,f.query);
    const warnings=f.state.rules.filter(rule=>rule.phase==='warning');
    const spatial=f.state.rules.filter(rule=>rule.kind!=='return'&&rule.kind!=='pot'&&rule.phase!=='restoring');
    expect(warnings.length).toBeLessThanOrEqual(1);
@@ -349,16 +354,15 @@ describe('environment announcements prefer observable targets without suppressin
   advance(f,3.01);expect(f.query.lineOfSight({x:33,z:15},{x:37,z:15},1.05,f.state)).toBe(true);
  });
 
- it('retains the fixed known home desk when no observable target is available',()=>{
+ it('does not issue an unreachable mandatory home inspection behind a sealed wall',()=>{
   const f=fixture();f.world.walls.push({id:'occluder',x:10,z:8,w:20,d:.18,height:2.8,roomId:0});
   allowOnly(f,['desk']);updateEnvironment(f.state,0,f.world,f.query);
-  expect(f.state.rules[0]?.targetId).toBe('home');expect(f.state.rules[0]?.effect).toContain('暂不可见');
-  advance(f,3.9);expect(f.state.deskHeights.home).toBeCloseTo(1.9);
+  expect(f.state.rules).toEqual([]);expect(f.state.inspection).toBeNull();
+  expect(f.state.deskHeights.home).toBeCloseTo(.75);
  });
 
  it('prefers a local command across rule kinds before falling back to a remote fixed desk',()=>{
   const f=fixture();Object.assign(f.state.player,{x:30,z:15});Object.assign(f.state.boss,{x:31,z:15});
-  f.state.deskHeights.project=1.9;
   allowOnly(f,['desk','pressure']);updateEnvironment(f.state,0,f.world,f.query);
   expect(f.state.rules[0]?.kind).toBe('pressure');expect(f.state.rules[0]?.roomId).toBe(1);
   expect(f.state.rules[0]?.effect).not.toContain('其他房间');

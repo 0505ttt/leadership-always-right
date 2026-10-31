@@ -3,6 +3,17 @@ import { GameInput } from '../src/gameplay/input';
 import type { Settings } from '../src/contracts/game';
 
 afterEach(()=>vi.unstubAllGlobals());
+it('does not replay a held one-shot key when a modal closes',()=>{
+ const win=new EventTarget(),doc=Object.assign(new EventTarget(),{pointerLockElement:null,hidden:false});
+ vi.stubGlobal('window',win);vi.stubGlobal('document',doc);
+ const input=new GameInput(new EventTarget() as HTMLCanvasElement,{quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1},()=>{},()=>{});
+ const key=(code:string,repeat=false)=>win.dispatchEvent(Object.assign(new Event('keydown'),{code,repeat}));
+ input.setEnabled(true);key('KeyF');expect(input.frame().computerPressed).toBe(true);
+ input.setEnabled(false);key('KeyF',true);input.setEnabled(true);key('KeyF',true);
+ expect(input.frame().computerPressed).toBe(false);
+ win.dispatchEvent(Object.assign(new Event('keyup'),{code:'KeyF'}));key('KeyF');
+ expect(input.frame().computerPressed).toBe(true);input.dispose();
+});
 it('routes Escape to pause or resume once while disabled gameplay keys remain ignored',()=>{
  const win=new EventTarget(),doc=Object.assign(new EventTarget(),{pointerLockElement:null,hidden:false});
  vi.stubGlobal('window',win);vi.stubGlobal('document',doc);

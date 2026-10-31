@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fafaf8"><title>Identity, in lines.</title><style>html,body{margin:0;height:100%;background:#fafaf8}.office-loader{--paper:#fafaf8;position:fixed;inset:0;z-index:80;box-sizing:border-box;background:var(--paper);color:#202220;overflow:hidden;display:flex;overscroll-behavior:contain;font-family:Arial,Helvetica,"PingFang SC","Microsoft YaHei",sans-serif;padding:clamp(20px,3.6vw,52px) max(20px,env(safe-area-inset-right)) 0 max(20px,env(safe-area-inset-left));font-size:15px;line-height:1.5;isolation:isolate}
+.office-loader[hidden]{display:none}.office-loader *{box-sizing:border-box}.office-loader button{font:inherit;cursor:pointer;border:1px solid currentColor;border-radius:7px;min-height:44px;padding:9px 15px;background:transparent;color:inherit;font-weight:500}.office-loader button:disabled{cursor:default;opacity:.5}.office-loader button:focus-visible,.office-loader__card:focus-visible{outline:3px solid #267dff;outline-offset:4px}
+.office-loader__inner{max-width:1200px;width:100%;margin:0 auto;min-height:0;flex:1;display:flex;flex-direction:column}.office-loader__top,.office-loader h1,.office-loader__intro,.office-loader__footer,.office-loader__note{flex-shrink:0}.office-loader__top{display:flex;justify-content:space-between;align-items:center;gap:18px}.office-loader__company{font-size:14px;margin:0}.office-loader h1{font-family:Georgia,"Times New Roman","Songti SC",SimSun,serif;font-weight:400;font-size:clamp(38px,4.7vw,57px);letter-spacing:-.035em;line-height:1.14;margin:25px 0 13px}.office-loader__intro{max-width:65ch;margin:0 0 27px;color:#535650}
+.office-loader__cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:19px;min-height:0;overflow:auto;padding:5px 4px 15px;align-content:start;flex:1}.office-loader__slot{position:relative;min-width:0;padding-bottom:6px}.office-loader__plate{position:absolute;inset:0 0 6px;border-radius:17px;background:var(--plate);border:1px solid rgba(32,34,32,.12);opacity:.7;transform:translateY(6px);transition:transform 300ms ease-out,opacity 300ms ease-out}
+.office-loader__card{position:relative;aspect-ratio:.70;min-height:460px;border-radius:17px;background:var(--card);color:var(--ink);overflow:hidden;transform:translateY(0);transition:transform 300ms ease-out;touch-action:pan-y}.office-loader__card canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.office-loader__card-title{position:absolute;top:17px;left:57px;font-size:15px;margin:0;font-weight:500}.office-loader__card-foot{position:absolute;left:23px;right:20px;bottom:24px}.office-loader__slogan{font-size:clamp(27px,2.8vw,37px);font-weight:400;line-height:1.17;white-space:pre-line;letter-spacing:-.04em;margin:0 0 16px}.office-loader__card .office-loader__source{border:0;padding:0;min-height:44px;text-align:left;border-radius:0;font-size:13px}.office-loader__field-status{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;margin:2px 0 0;opacity:1}.office-loader__fallback{position:absolute;top:30%;left:22px;right:22px;font-size:14px}
+@media(hover:hover){.office-loader__slot:hover .office-loader__card{transform:translateY(-4px)}.office-loader__slot:hover .office-loader__plate{transform:translateY(12px);opacity:1}}
+.office-loader__footer{position:sticky;bottom:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px 24px;background:var(--paper);padding:23px 0 max(20px,env(safe-area-inset-bottom));margin-top:22px;border-top:1px solid #d9dbd5}.office-loader__stage{font-size:16px;font-weight:600;margin:0}.office-loader__detail{font-size:13px;margin:4px 0 0;max-width:70ch;overflow-wrap:anywhere}.office-loader__counts{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;margin:7px 0 0}.office-loader__actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.office-loader .office-loader__enter{background:#202220;color:#fafaf8;border-color:#202220;min-width:150px}.office-loader__errors{grid-column:1/-1;margin:0;padding:0;list-style:none}.office-loader__errors:empty{display:none}.office-loader__errors li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid #d9dbd5}.office-loader__errors span{overflow-wrap:anywhere;font-size:13px}.office-loader__note{font-size:11px;color:#535650;margin:15px 0 0}.office-loader__note span{float:right}
+.office-loader__dialog{width:min(720px,calc(100vw - 32px));max-height:85dvh;border:1px solid #202220;border-radius:17px;padding:24px;background:#fafaf8;color:#202220}.office-loader__dialog::backdrop{background:rgba(17,18,18,.45)}.office-loader__dialog h2{font-family:Georgia,"Times New Roman","Songti SC",SimSun,serif;font-weight:400;margin:0 0 14px}.office-loader__dialog pre{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:50dvh;overflow:auto}.office-loader__dialog p{font-size:13px;max-width:65ch}.office-loader__dialog-actions{display:flex;justify-content:flex-end}
+@media(max-width:900px) and (min-width:651px){.office-loader__card{min-height:460px}.office-loader__slogan{font-size:25px}.office-loader__card-foot{left:18px}}
+@media(max-width:650px){.office-loader{padding-top:max(17px,env(safe-area-inset-top))}.office-loader h1{font-size:38px;margin:20px 0 10px}.office-loader__intro{font-size:14px;margin-bottom:20px}.office-loader__cards{grid-template-columns:1fr;gap:16px}.office-loader__card{min-height:194px;aspect-ratio:auto}.office-loader__card-foot{left:20px;bottom:12px;right:45%}.office-loader__slogan{font-size:22px;margin-bottom:2px}.office-loader__card-title{font-size:14px}.office-loader__field-status{display:none}.office-loader__source{font-size:12px!important}.office-loader__footer{grid-template-columns:1fr;padding-top:13px;margin-top:18px;gap:10px}.office-loader__actions{display:grid;grid-template-columns:1fr auto}.office-loader__enter{min-width:0!important}.office-loader__note{font-size:10px}.office-loader__note span{float:none;display:block}.office-loader__errors li{align-items:flex-start}.office-loader__detail{font-size:12px}.office-loader__counts{margin-top:3px}}
+@media(max-height:650px) and (min-width:651px){.office-loader{padding-top:18px}.office-loader h1{margin:12px 0 8px;font-size:38px}.office-loader__intro{margin-bottom:18px}.office-loader__card{min-height:270px;aspect-ratio:1.03}.office-loader__slogan{font-size:22px}.office-loader__card-foot{bottom:12px;right:43%}.office-loader__field-status{display:none}.office-loader__footer{margin-top:14px;padding-top:13px}}
+@media(prefers-reduced-motion:reduce){.office-loader__card,.office-loader__plate{transition:none}.office-loader__slot:hover .office-loader__card{transform:translateY(0)}.office-loader__slot:hover .office-loader__plate{transform:translateY(6px)}}
+.office-loader[data-motion="paused"] .office-loader__card,.office-loader[data-motion="paused"] .office-loader__plate{transition:none}.office-loader[data-motion="paused"] .office-loader__slot:hover .office-loader__card{transform:translateY(0)}.office-loader[data-motion="paused"] .office-loader__slot:hover .office-loader__plate{transform:translateY(6px)}
+</style></head><body><script>"use strict";
+(() => {
+  // src/loading/field.ts
+  var GRID = 60;
+  var SEGMENTS = GRID * 30;
+  var LINE_WIDTHS = [0.38, 1.12, 2.28, 3.8];
+  var LINE_ALPHAS = [0.15, 0.64, 0.93, 1];
+  var quantize = (value) => value < 0.12 ? 0 : value < 0.42 ? 1 : value < 0.89 ? 2 : 3;
+  function createNoise(seed = 7319) {
+    const values = new Float32Array(128 * 128);
+    let state = seed | 0;
+    for (let i = 0; i < values.length; i++) {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      values[i] = (state >>> 0) / 4294967295 * 2 - 1;
+    }
+    return values;
+  }
+  var NOISE = createNoise();
+  var smooth = (value) => value * value * (3 - 2 * value);
+  function noiseAt(x, y, lattice = NOISE) {
+    const ix = Math.floor(x), iy = Math.floor(y), tx = smooth(x - ix), ty = smooth(y - iy);
+    const value = (dx, dy) => lattice[(iy + dy & 127) * 128 + (ix + dx & 127)];
+    const a = value(0, 0) * (1 - tx) + value(1, 0) * tx;
+    const b = value(0, 1) * (1 - tx) + value(1, 1) * tx;
+    return a * (1 - ty) + b * ty;
+  }
+  function samplePath(path, scale, createCanvas = () => document.createElement("canvas"), createPath = (value) => new Path2D(value)) {
+    const canvas = createCanvas();
+    canvas.width = canvas.height = GRID * 5;
+    try {
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("\u5F53\u524D\u6D4F\u89C8\u5668\u4E0D\u652F\u6301 Canvas 2D\u3002");
+      context.fillStyle = "#000";
+      context.fillRect(0, 0, 300, 300);
+      context.translate(150, 150);
+      context.scale(300 * scale / 24, 300 * scale / 24);
+      context.translate(-12, -12);
+      context.fillStyle = "#fff";
+      context.fill(createPath(path));
+      const pixels = context.getImageData(0, 0, 300, 300).data;
+      const field = new Float32Array(GRID * GRID);
+      for (let row = 0; row < GRID; row++) for (let col = 0; col < GRID; col++) {
+        let sum = 0;
+        for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
+          const offset = ((row * 5 + y) * 300 + col * 5 + x) * 4;
+          sum += (0.2126 * pixels[offset] + 0.7152 * pixels[offset + 1] + 0.0722 * pixels[offset + 2]) / 255;
+        }
+        field[row * GRID + col] = sum / 25;
+      }
+      return field;
+    } finally {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+  }
+  function detectRegions(field, previous = []) {
+    const stride = GRID + 1, integral = new Float64Array(stride * stride);
+    for (let y = 0; y < GRID; y++) {
+      let row = 0;
+      for (let x = 0; x < GRID; x++) {
+        row += field[y * GRID + x];
+        integral[(y + 1) * stride + x + 1] = integral[y * stride + x + 1] + row;
+      }
+    }
+    const candidates = [];
+    let brightest = 0;
+    for (let y = 0; y <= GRID - 7; y++) for (let x = 0; x <= GRID - 7; x++) {
+      const score = (integral[(y + 7) * stride + x + 7] - integral[y * stride + x + 7] - integral[(y + 7) * stride + x] + integral[y * stride + x]) / 49;
+      brightest = Math.max(brightest, score);
+      const cx = x + 3, cy = y + 3;
+      const continuity = previous.reduce((best, old) => Math.max(best, 0.025 * Math.exp(-((cx - old.x) ** 2 + (cy - old.y) ** 2) / 128)), 0);
+      candidates.push({ x: cx, y: cy, score, ranked: score + continuity });
+    }
+    if (brightest < 0.04) return [];
+    candidates.sort((a, b) => b.ranked - a.ranked || a.y - b.y || a.x - b.x);
+    const select = (distance) => {
+      const result = [];
+      for (const candidate of candidates) {
+        if (candidate.score < brightest * 0.48 || result.some((other) => Math.hypot(candidate.x - other.x, candidate.y - other.y) < distance)) continue;
+        result.push({ x: candidate.x, y: candidate.y, score: candidate.score });
+        if (result.length === 3) break;
+      }
+      return result;
+    };
+    const separated = select(16);
+    return separated.length >= 2 ? separated : select(12);
+  }
+  function createSlots() {
+    return Array.from({ length: 3 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, alpha: 0, target: null, pending: null, retiring: false }));
+  }
+  function matchRegions(slots, regions, immediate = false) {
+    const unused = new Set(slots.map((_, index) => index));
+    const unmatched = [];
+    for (const region of regions) {
+      let choice = -1, distance = 12 + 1e-9;
+      for (const index of unused) {
+        const target = slots[index].target;
+        if (!target) continue;
+        const d = Math.hypot(region.x - target.x, region.y - target.y);
+        if (d < distance) {
+          choice = index;
+          distance = d;
+        }
+      }
+      if (choice < 0) {
+        unmatched.push(region);
+        continue;
+      }
+      const slot = slots[choice];
+      unused.delete(choice);
+      slot.target = region;
+      slot.pending = null;
+      slot.retiring = false;
+    }
+    for (const index of unused) {
+      const slot = slots[index], next = unmatched.shift() ?? null;
+      if (immediate || slot.alpha < 0.04) {
+        slot.target = next;
+        slot.pending = null;
+        slot.retiring = false;
+        if (next) {
+          slot.x = next.x;
+          slot.y = next.y;
+          slot.vx = slot.vy = 0;
+        }
+      } else {
+        slot.pending = next;
+        slot.retiring = true;
+      }
+    }
+    if (immediate) for (const slot of slots) {
+      slot.alpha = slot.target ? 1 : 0;
+      if (slot.target) {
+        slot.x = slot.target.x;
+        slot.y = slot.target.y;
+        slot.vx = slot.vy = 0;
+      }
+    }
+  }
+  function stepSlots(slots, dt, visible) {
+    const count = Math.max(1, Math.ceil(dt * 120)), step = dt / count;
+    for (const slot of slots) {
+      slot.alpha += ((visible && slot.target && !slot.retiring ? 1 : 0) - slot.alpha) * (1 - Math.exp(-dt * 16));
+      if (slot.retiring && slot.alpha < 0.04) {
+        slot.target = slot.pending;
+        slot.pending = null;
+        slot.retiring = false;
+        if (slot.target) {
+          slot.x = slot.target.x;
+          slot.y = slot.target.y;
+          slot.vx = slot.vy = 0;
+        }
+      }
+      if (!slot.target) continue;
+      for (let i = 0; i < count; i++) {
+        slot.vx += ((slot.target.x - slot.x) * 144 - slot.vx * 24) * step;
+        slot.vy += ((slot.target.y - slot.y) * 144 - slot.vy * 24) * step;
+        slot.x += slot.vx * step;
+        slot.y += slot.vy * step;
+      }
+      if (Math.abs(slot.x - slot.target.x) + Math.abs(slot.y - slot.target.y) + Math.abs(slot.vx) + Math.abs(slot.vy) < 2e-3) {
+        slot.x = slot.target.x;
+        slot.y = slot.target.y;
+        slot.vx = slot.vy = 0;
+      }
+    }
+  }
+  var LineField = class {
+    constructor(source, seed) {
+      this.source = source;
+      this.seed = seed;
+      if (source.length !== GRID * GRID) throw new Error("Expected a 60 \xD7 60 luminance field");
+    }
+    source;
+    seed;
+    brightness = new Float32Array(SEGMENTS);
+    dx = new Float32Array(SEGMENTS);
+    dy = new Float32Array(SEGMENTS);
+    vx = new Float32Array(SEGMENTS);
+    vy = new Float32Array(SEGMENTS);
+    projection = new Float32Array(GRID * GRID);
+    slots = createSlots();
+    pulse = 0;
+    time = 0;
+    scans = 0;
+    lastScan = -Infinity;
+    pulsePoint = null;
+    pointer = null;
+    point(pointer, force = false) {
+      this.pointer = pointer;
+      if (force || !this.pulsePoint || Math.hypot(pointer.x - this.pulsePoint.x, pointer.y - this.pulsePoint.y) > 1.5) {
+        this.pulsePoint = { ...pointer };
+        this.pulse = 1;
+      }
+    }
+    clearPointer() {
+      this.pointer = null;
+      this.pulsePoint = null;
+    }
+    step(dt, area, overlay, animated) {
+      if (animated) this.time += dt;
+      const cell = area.width / GRID, radius = area.width / 4;
+      const substeps = Math.max(1, Math.ceil(dt * 30)), step = dt / substeps;
+      for (let index = 0; index < SEGMENTS; index++) {
+        const col = index % GRID, row = Math.floor(index / GRID) * 2;
+        const base = (this.source[row * GRID + col] + this.source[(row + 1) * GRID + col]) / 2;
+        this.brightness[index] = base * 0.94 + noiseAt(col * 0.15 + this.seed, row * 0.16 - this.time * 0.17) * 0.12 * (0.25 + base * 0.75);
+        if (!animated) {
+          this.dx[index] = this.dy[index] = this.vx[index] = this.vy[index] = 0;
+          continue;
+        }
+        let tx = 0, ty = 0;
+        if (this.pointer) {
+          const x = area.x + (col + 0.5) * cell - this.pointer.x, y = area.y + (row + 1) * cell - this.pointer.y;
+          const distance = Math.hypot(x, y), influence = Math.max(0, 1 - distance / radius) ** 2 * this.pulse * 25;
+          if (distance > 1e-4) {
+            tx = x / distance * influence;
+            ty = y / distance * influence * 0.58;
+          }
+        }
+        for (let part = 0; part < substeps; part++) {
+          this.vx[index] += ((tx - this.dx[index]) * 145 - this.vx[index] * 19) * step;
+          this.vy[index] += ((ty - this.dy[index]) * 145 - this.vy[index] * 19) * step;
+          this.dx[index] += this.vx[index] * step;
+          this.dy[index] += this.vy[index] * step;
+        }
+      }
+      this.pulse = animated ? this.pulse * Math.exp(-dt * 5.5) : 0;
+      if (overlay && (!animated || this.time - this.lastScan >= 0.1)) {
+        const regions = this.scan(cell);
+        matchRegions(this.slots, regions, !animated);
+        this.lastScan = this.time;
+      }
+      if (animated) stepSlots(this.slots, dt, overlay);
+      else if (!overlay) for (const slot of this.slots) slot.alpha = 0;
+    }
+    scan(cell) {
+      this.projection.fill(0);
+      const accumulate = (x, y, value) => {
+        const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+        for (let oy = 0; oy < 2; oy++) for (let ox = 0; ox < 2; ox++) {
+          const col = ix + ox, row = iy + oy;
+          if (col >= 0 && col < GRID && row >= 0 && row < GRID) this.projection[row * GRID + col] += value * (ox ? fx : 1 - fx) * (oy ? fy : 1 - fy);
+        }
+      };
+      for (let index = 0; index < SEGMENTS; index++) {
+        const x = index % GRID + this.dx[index] / cell, y = Math.floor(index / GRID) * 2 + this.dy[index] / cell;
+        const value = Math.max(0, this.brightness[index]);
+        accumulate(x, y, value);
+        accumulate(x, y + 1, value);
+      }
+      this.scans++;
+      return detectRegions(this.projection, this.slots.flatMap((slot) => slot.target ? [slot.target] : []));
+    }
+  };
+  var FrameLoop = class {
+    constructor(draw, raf = (callback) => window.requestAnimationFrame(callback), cancel = (id) => window.cancelAnimationFrame(id)) {
+      this.draw = draw;
+      this.raf = raf;
+      this.cancel = cancel;
+    }
+    draw;
+    raf;
+    cancel;
+    request = null;
+    last = null;
+    disposed = false;
+    state = { motion: true, visible: true, intersecting: true, modal: false };
+    get scheduled() {
+      return this.request !== null;
+    }
+    set(state) {
+      Object.assign(this.state, state);
+      this.invalidate();
+    }
+    get visible() {
+      return this.state.visible && this.state.intersecting;
+    }
+    get animating() {
+      return this.visible && this.state.motion && !this.state.modal;
+    }
+    invalidate() {
+      if (this.disposed) return;
+      if (!this.animating) {
+        if (this.request !== null) this.cancel(this.request);
+        this.request = null;
+        this.last = null;
+        if (this.visible) this.draw(0, false);
+      } else if (this.request === null) this.request = this.raf(this.tick);
+    }
+    tick = (now) => {
+      this.request = null;
+      if (this.disposed || !this.animating) return;
+      const dt = this.last === null ? 1 / 60 : Math.min(0.05, Math.max(0, (now - this.last) / 1e3));
+      this.last = now;
+      this.draw(dt, true);
+      this.invalidate();
+    };
+    dispose() {
+      this.disposed = true;
+      if (this.request !== null) this.cancel(this.request);
+      this.request = null;
+      this.last = null;
+    }
+  };
+
+  // src/loading/canvas-view.ts
+  function createFieldCard(card, canvas, symbol, motion) {
+    const context = canvas.getContext("2d");
+    if (!context || typeof Path2D === "undefined") throw new Error("\u6B64\u6D4F\u89C8\u5668\u4E0D\u652F\u6301\u7EBF\u573A\u753B\u5E03\uFF0C\u8D44\u6E90\u51C6\u5907\u4ECD\u53EF\u7EE7\u7EED\u3002");
+    const field = new LineField(samplePath(symbol.path, symbol.scale), symbol.seed);
+    const events = new AbortController();
+    let width = 1, height = 1, dpr = 0, visible = true, hovered = false, focused = false, touching = false;
+    let pending = null;
+    let destroyed = false, lastStatus = "";
+    const status = card.querySelector(".office-loader__field-status");
+    const area = () => {
+      const compact = width > height * 1.1;
+      const size = compact ? Math.min(height * 0.65, width * 0.43) : Math.min(width * 0.8, height * 0.58);
+      return { width: Math.max(1, size), x: compact ? width - size - 15 : (width - size) / 2, y: compact ? (height - size) / 2 : height * 0.17 };
+    };
+    function syncBacking() {
+      const nextDpr = window.devicePixelRatio || 1;
+      const pixelWidth = Math.max(1, Math.round(width * nextDpr)), pixelHeight = Math.max(1, Math.round(height * nextDpr));
+      if (dpr !== nextDpr || canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        dpr = nextDpr;
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+    }
+    function lines(region, miniature = false) {
+      const cell = region.width / GRID, half = Math.max(0, (cell * 2 - (miniature ? 0.06 : 0.7)) / 2);
+      context.strokeStyle = symbol.ink;
+      context.lineCap = "butt";
+      for (let band = 0; band < 4; band++) {
+        context.beginPath();
+        context.globalAlpha = LINE_ALPHAS[band];
+        context.lineWidth = LINE_WIDTHS[band] * cell / 5.25;
+        for (let index = 0; index < field.brightness.length; index++) {
+          const col = index % GRID, row = Math.floor(index / GRID) * 2;
+          const brightness = miniature ? (field.source[row * GRID + col] + field.source[(row + 1) * GRID + col]) / 2 : field.brightness[index];
+          if (quantize(brightness) !== band) continue;
+          const x = region.x + (col + 0.5) * cell + (miniature ? 0 : field.dx[index]);
+          const y = region.y + (row + 1) * cell + (miniature ? 0 : field.dy[index]);
+          context.moveTo(x, y - half);
+          context.lineTo(x, y + half);
+        }
+        context.stroke();
+      }
+      context.globalAlpha = 1;
+    }
+    function detection(region) {
+      const cell = region.width / GRID;
+      context.strokeStyle = symbol.detection;
+      context.fillStyle = symbol.detection;
+      context.lineWidth = 1;
+      context.font = "10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+      const slots = field.slots.filter((slot) => slot.target && slot.alpha >= 0.01);
+      for (let i = 1; i < slots.length; i++) {
+        const a = slots[i - 1], b = slots[i];
+        context.globalAlpha = Math.min(a.alpha, b.alpha) * 0.5;
+        context.beginPath();
+        context.moveTo(region.x + (a.x + 0.5) * cell, region.y + (a.y + 0.5) * cell);
+        context.lineTo(region.x + (b.x + 0.5) * cell, region.y + (b.y + 0.5) * cell);
+        context.stroke();
+      }
+      for (const slot of slots) {
+        const x = region.x + (slot.x - 4) * cell, y = region.y + (slot.y - 4) * cell, side = cell * 9, corner = Math.min(7, side / 3);
+        context.globalAlpha = slot.alpha * 0.1;
+        context.fillRect(x, y, side, side);
+        context.globalAlpha = slot.alpha * 0.72;
+        context.strokeRect(x, y, side, side);
+        context.globalAlpha = slot.alpha;
+        context.lineWidth = 1.5;
+        context.beginPath();
+        for (const sx of [0, 1]) for (const sy of [0, 1]) {
+          const px = x + sx * side, py = y + sy * side;
+          context.moveTo(px + (sx ? -corner : corner), py);
+          context.lineTo(px, py);
+          context.lineTo(px, py + (sy ? -corner : corner));
+        }
+        context.stroke();
+        context.lineWidth = 1;
+        const moving = Math.abs(slot.vx) + Math.abs(slot.vy) > 5e-3;
+        context.fillText(`${slot.x.toFixed(moving ? 1 : 0)},${slot.y.toFixed(moving ? 1 : 0)}`, x, y - 4);
+      }
+      context.globalAlpha = 1;
+    }
+    const loop = new FrameLoop((dt, animated) => {
+      syncBacking();
+      if (pending) {
+        const rect = card.getBoundingClientRect();
+        field.point({ x: pending.x - rect.left, y: pending.y - rect.top }, pending.force);
+        pending = null;
+      }
+      const overlay = hovered || focused || touching, region = area();
+      field.step(dt, region, overlay, animated);
+      context.clearRect(0, 0, width, height);
+      lines(region);
+      lines({ x: 21, y: 18, width: 25 }, true);
+      detection(region);
+      const text = overlay ? "\u6570\u503C\u7EBF\u573A \xB7 \u53EF\u89C6\u533A\u57DF" : "\u89E6\u6478\u6216\u805A\u7126\uFF0C\u67E5\u770B\u7EBF\u573A";
+      if (status && text !== lastStatus) {
+        status.textContent = text;
+        lastStatus = text;
+      }
+    });
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      width = Math.max(1, rect.width);
+      height = Math.max(1, rect.height);
+      loop.invalidate();
+    };
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      width = Math.max(1, entry.contentRect.width);
+      height = Math.max(1, entry.contentRect.height);
+      loop.invalidate();
+    });
+    observer?.observe(canvas);
+    const intersection = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver((entries) => {
+      for (const entry of entries) if (entry.target === card) loop.set({ intersecting: entry.isIntersecting });
+    });
+    intersection?.observe(card);
+    const options = { signal: events.signal };
+    const pointer = (event, force = false) => {
+      pending = { x: event.clientX, y: event.clientY, force: force || !!pending?.force };
+      loop.invalidate();
+    };
+    card.addEventListener("pointerenter", (event) => {
+      hovered = event.pointerType !== "touch";
+      pointer(event, true);
+    }, options);
+    card.addEventListener("pointermove", (event) => pointer(event), options);
+    card.addEventListener("pointerdown", (event) => {
+      touching = event.pointerType !== "mouse";
+      pointer(event, true);
+    }, options);
+    const release = () => {
+      touching = false;
+      loop.invalidate();
+    };
+    card.addEventListener("pointerup", release, options);
+    card.addEventListener("pointercancel", release, options);
+    card.addEventListener("pointerleave", () => {
+      hovered = touching = false;
+      pending = null;
+      field.clearPointer();
+      loop.invalidate();
+    }, options);
+    card.addEventListener("focusin", () => {
+      focused = true;
+      loop.invalidate();
+    }, options);
+    card.addEventListener("focusout", (event) => {
+      focused = !!event.relatedTarget && card.contains(event.relatedTarget);
+      loop.invalidate();
+    }, options);
+    const visibility = () => loop.set({ visible: visible && !document.hidden });
+    document.addEventListener("visibilitychange", visibility, options);
+    window.addEventListener("resize", resize, options);
+    let resolution = null;
+    const dprChanged = () => {
+      watchDpr();
+      loop.invalidate();
+    };
+    function watchDpr() {
+      resolution?.removeEventListener("change", dprChanged);
+      resolution = typeof window.matchMedia === "function" ? window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`) : null;
+      resolution?.addEventListener("change", dprChanged);
+    }
+    watchDpr();
+    resize();
+    loop.set({ motion, visible: !document.hidden });
+    return {
+      setMotion(value) {
+        loop.set({ motion: value });
+      },
+      setVisible(value) {
+        visible = value;
+        visibility();
+      },
+      setModal(value) {
+        loop.set({ modal: value });
+      },
+      diagnostics: () => ({ id: symbol.id, samples: 1, width: canvas.width, height: canvas.height, cssWidth: width, cssHeight: height, dpr, scheduled: loop.scheduled, scans: field.scans, targets: field.slots.filter((slot) => slot.target && slot.alpha >= 0.04).length }),
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        loop.dispose();
+        events.abort();
+        observer?.disconnect();
+        intersection?.disconnect();
+        resolution?.removeEventListener("change", dprChanged);
+        canvas.width = canvas.height = 0;
+      }
+    };
+  }
+
+  // src/loading/screen.ts
+  function element(tag, className = "", text) {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (text !== void 0) node.textContent = text;
+    return node;
+  }
+  function blend(hex, other, amount) {
+    const channel = (value, offset) => Number.parseInt(value.slice(offset, offset + 2), 16);
+    return `rgb(${[1, 3, 5].map((offset) => Math.round(channel(hex, offset) * (1 - amount) + channel(other, offset) * amount)).join(",")})`;
+  }
+  function mountFieldStudy(host, symbols, title, intro) {
+    const root = element("section", "office-loader");
+    root.setAttribute("aria-label", title);
+    const inner = element("div", "office-loader__inner"), top = element("header", "office-loader__top");
+    top.append(element("p", "office-loader__company", "\u7529\u9505\u6709\u9650\u516C\u53F8 / \u79BB\u5C97\u51C6\u5907"));
+    const toggle = element("button", "", "\u64AD\u653E\u52A8\u6548");
+    toggle.type = "button";
+    top.append(toggle);
+    inner.append(top, element("h1", "", title), element("p", "office-loader__intro", intro));
+    const grid = element("div", "office-loader__cards");
+    inner.append(grid);
+    const reduced = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+    let motion = !reduced?.matches, visible = true, destroyed = false;
+    const views = [], failures = [];
+    const events = new AbortController(), options = { signal: events.signal };
+    const dialog = element("dialog", "office-loader__dialog");
+    dialog.setAttribute("aria-labelledby", "office-loader-path-title");
+    const dialogTitle = element("h2", "", "\u56FE\u5F62\u6765\u6E90");
+    dialogTitle.id = "office-loader-path-title";
+    const explanation = element("p", "", "\u8FD9\u4E9B\u68C0\u6D4B\u6846\u6765\u81EA\u5F53\u524D\u7EBF\u573A\u7684\u4EAE\u5EA6\u8BA1\u7B97\uFF0C\u662F\u89C6\u89C9\u4EA4\u4E92\uFF0C\u4E0D\u662F AI \u8BC6\u522B\u7ED3\u679C\u3002");
+    const pathText = element("pre"), dialogActions = element("div", "office-loader__dialog-actions"), close = element("button", "", "\u5173\u95ED");
+    close.type = "button";
+    dialogActions.append(close);
+    dialog.append(dialogTitle, explanation, pathText, dialogActions);
+    let origin = null;
+    const modal = (value) => views.forEach((view) => view.setModal(value));
+    const closed = () => {
+      modal(false);
+      origin?.focus();
+      origin = null;
+    };
+    const closeDialog = () => {
+      if (typeof dialog.close === "function") dialog.close();
+      else {
+        dialog.removeAttribute("open");
+        closed();
+      }
+    };
+    close.addEventListener("click", closeDialog, options);
+    dialog.addEventListener("close", closed, options);
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && typeof dialog.close !== "function") {
+        event.preventDefault();
+        closeDialog();
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        close.focus();
+      }
+    }, options);
+    root.append(inner, dialog);
+    host.append(root);
+    for (const symbol of symbols) {
+      const slot = element("div", "office-loader__slot"), plate = element("div", "office-loader__plate"), card = element("article", "office-loader__card");
+      slot.style.setProperty("--plate", blend(symbol.background, symbol.light ? "#202220" : "#fafaf8", symbol.light ? 0.16 : 0.28));
+      card.style.setProperty("--card", symbol.background);
+      card.style.setProperty("--ink", symbol.ink);
+      card.tabIndex = 0;
+      card.setAttribute("aria-label", `${symbol.title}\u3002\u805A\u7126\u6216\u89E6\u6478\u53EF\u67E5\u770B\u6570\u503C\u7EBF\u573A\u3002`);
+      const canvas = element("canvas");
+      canvas.setAttribute("aria-hidden", "true");
+      const foot = element("div", "office-loader__card-foot"), source = element("button", "office-loader__source", "\u67E5\u770B\u56FE\u5F62\u8DEF\u5F84 \u2192");
+      source.type = "button";
+      const slogan = element("p", "office-loader__slogan", symbol.slogan);
+      foot.append(slogan, source, element("p", "office-loader__field-status", "\u89E6\u6478\u6216\u805A\u7126\uFF0C\u67E5\u770B\u7EBF\u573A"));
+      card.append(canvas, element("h2", "office-loader__card-title", symbol.title), foot);
+      slot.append(plate, card);
+      grid.append(slot);
+      source.addEventListener("click", () => {
+        origin = source;
+        dialogTitle.textContent = `${symbol.title} / 24 \xD7 24 Path2D`;
+        pathText.textContent = symbol.path;
+        modal(true);
+        if (typeof dialog.showModal === "function") dialog.showModal();
+        else {
+          dialog.setAttribute("open", "");
+          dialog.setAttribute("aria-modal", "true");
+        }
+        close.focus();
+      }, options);
+      try {
+        views.push(createFieldCard(card, canvas, symbol, motion));
+      } catch (error) {
+        canvas.remove();
+        card.append(element("p", "office-loader__fallback", error instanceof Error ? error.message : "\u7EBF\u573A\u6682\u4E0D\u53EF\u7528\uFF0C\u8D44\u6E90\u51C6\u5907\u4ECD\u53EF\u7EE7\u7EED\u3002"));
+        failures.push({ id: symbol.id, samples: 0, width: 0, height: 0, cssWidth: 0, cssHeight: 0, dpr: 0, scheduled: false, scans: 0, targets: 0 });
+      }
+    }
+    const syncMotion = () => {
+      toggle.textContent = motion ? "\u6682\u505C\u52A8\u6548" : "\u64AD\u653E\u52A8\u6548";
+      toggle.setAttribute("aria-pressed", String(motion));
+      root.dataset.motion = motion ? "playing" : "paused";
+      views.forEach((view) => view.setMotion(motion));
+    };
+    toggle.addEventListener("click", () => {
+      motion = !motion;
+      syncMotion();
+    }, options);
+    const reduceChanged = () => {
+      motion = !reduced?.matches;
+      syncMotion();
+    };
+    reduced?.addEventListener("change", reduceChanged);
+    syncMotion();
+    return {
+      root,
+      inner,
+      get visible() {
+        return visible;
+      },
+      setVisible(value) {
+        visible = value;
+        root.hidden = !value;
+        if (!value && dialog.open) closeDialog();
+        views.forEach((view) => view.setVisible(value));
+      },
+      getDiagnostics() {
+        const cards = [...views.map((view) => view.diagnostics()), ...failures];
+        return { sampleCount: cards.reduce((sum, card) => sum + card.samples, 0), cards };
+      },
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        events.abort();
+        reduced?.removeEventListener("change", reduceChanged);
+        views.forEach((view) => view.destroy());
+        root.remove();
+      }
+    };
+  }
+
+  // src/loading/reference-symbols.ts
+  var REFERENCE_SYMBOLS = [
+    {
+      id: "apple",
+      title: "Apple",
+      slogan: "Think different.",
+      seed: 3,
+      scale: 0.82,
+      background: "#eeeeeb",
+      ink: "#202220",
+      detection: "#267dff",
+      light: true,
+      path: "M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
+    },
+    {
+      id: "google",
+      title: "Google",
+      slogan: "Find your next possibility.",
+      seed: 29,
+      scale: 0.79,
+      background: "#2152e7",
+      ink: "#c2dcff",
+      detection: "#91dcff",
+      light: false,
+      path: "M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
+    },
+    {
+      id: "tesla",
+      title: "Tesla",
+      slogan: "Accelerate the future.",
+      seed: 51,
+      scale: 0.81,
+      background: "#111212",
+      ink: "#ec353e",
+      detection: "#4eaeff",
+      light: false,
+      path: "M12 5.362l2.475-3.026s4.245.09 8.471 2.054c-1.082 1.636-3.231 2.438-3.231 2.438-.146-1.439-1.154-1.79-4.354-1.79L12 24 8.619 5.034c-3.18 0-4.188.354-4.335 1.792 0 0-2.146-.795-3.229-2.43C5.28 2.431 9.525 2.34 9.525 2.34L12 5.362l-.004.002H12v-.002zm0-3.899c3.415-.03 7.326.528 11.328 2.28.535-.968.672-1.395.672-1.395C19.625.612 15.528.015 12 0 8.472.015 4.375.61 0 2.349c0 0 .195.525.672 1.396C4.674 1.989 8.585 1.435 12 1.46v.003z"
+    }
+  ];
+
+  // src/loading/reference.ts
+  var study = mountFieldStudy(document.body, REFERENCE_SYMBOLS, "Identity, in lines.", "Move through a familiar mark. Find the structure beneath the surface.");
+  study.root.querySelector(".office-loader__company").textContent = "StyleKit / Visual studies";
+  study.root.querySelectorAll(".office-loader__source").forEach((button) => {
+    button.textContent = "Reveal the source \u2192";
+  });
+  var footer = document.createElement("footer");
+  footer.className = "office-loader__note";
+  footer.textContent = "A study of recognition and reconstruction.";
+  var end = document.createElement("span");
+  end.textContent = "One path. A field of light. Four line weights.";
+  footer.append(end);
+  study.inner.append(footer);
+  Object.defineProperty(window, "__LINE_FIELD_REFERENCE__", { value: { getDiagnostics: () => study.getDiagnostics() }, configurable: false });
+})();
+</script></body></html>

@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "source": "Kimi-selected formal characters and visual components, retained original employee asset, and four Kimi-approved new props. Runtime integration is separate from full gameplay and visual acceptance.",
+  "version": 4,
+  "source": "Kimi-selected formal characters, approved office props and retained earlier employee asset. Main-game acceptance is tracked separately.",
   "assets": {
     "employee-base-v1": {
       "url": "assets/tripo/employee-base-v1.glb",
@@ -247,6 +247,166 @@
       ],
       "credits": 30,
       "integrationStatus": "instantiated in the main game; complete public acceptance tracked separately"
+    },
+    "exit-door-v1": {
+      "url": "assets/office-props/exit-door-v1.glb",
+      "bytes": 942616,
+      "sha256": "4c21ab5d05914bcc5e82b65b75b01bacdc0cff46953ba0ecfa09b358b2170b77",
+      "dimensions": [
+        2.18,
+        2.28,
+        0.12
+      ],
+      "triangles": 9340,
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "printer-v1": {
+      "url": "assets/office-props/printer-v1.glb",
+      "bytes": 574800,
+      "sha256": "337a55c9bd915bbee4769cb9a6f94d9cf28f1aa751250627a87c49d38a3e704b",
+      "dimensions": [
+        0.62,
+        0.3,
+        0.42
+      ],
+      "triangles": 5476,
+      "up": "+Y",
+      "forward": "+Z（出纸与操作面）",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "storage-shelf-v1": {
+      "url": "assets/office-props/storage-shelf-v1.glb",
+      "bytes": 2516340,
+      "sha256": "2e56e735bf1a7fc48ef8c1fde297dc71371e48f9202d4b633a0c2b52d47826cb",
+      "dimensions": [
+        2.1,
+        1.82,
+        0.28
+      ],
+      "triangles": 25672,
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "mug-v1": {
+      "url": "assets/office-props/mug-v1.glb",
+      "bytes": 208852,
+      "sha256": "2cd77d9923e2cff5187c243ed63f953c9c4fde5dba698f5094da177ab00b99ac",
+      "dimensions": [
+        0.1474,
+        0.125,
+        0.098
+      ],
+      "triangles": 1936,
+      "up": "+Y",
+      "forward": "+Z（杯体可绕Y调整把手方向）",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "paper-stack-v1": {
+      "url": "assets/office-props/paper-stack-v1.glb",
+      "bytes": 235916,
+      "sha256": "7b2b09f9b002d881753f314c6b85215d5cb27621f0a3d0759701a5d153a224c3",
+      "dimensions": [
+        0.32,
+        0.052,
+        0.2305
+      ],
+      "triangles": 1980,
+      "up": "+Y",
+      "forward": "+Z（可绕Y调整）",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "stationery-v1": {
+      "url": "assets/office-props/stationery-v1.glb",
+      "bytes": 260032,
+      "sha256": "0fc705800131253e34ace7ee292563e69d1845c72c908008a69aa6398683cd78",
+      "dimensions": [
+        0.15984,
+        0.15868,
+        0.13045
+      ],
+      "triangles": 2220,
+      "up": "+Y",
+      "forward": "+Z（可绕Y调整）",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "water-station-v1": {
+      "url": "assets/office-props/water-station-v1.glb",
+      "bytes": 681960,
+      "sha256": "ba2fa274a38a3f4cf77ca654a52e81615d42ed85e8ca0a94b3f1fe2cf70c5c03",
+      "dimensions": [
+        0.429,
+        1.039,
+        0.4675
+      ],
+      "triangles": 6584,
+      "up": "+Y",
+      "forward": "+Z（冷热水龙头与接水盘）",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "procedural-three.js",
+      "sourceTaskId": null,
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
+    },
+    "cake-v2": {
+      "url": "assets/office-props/cake-v2.glb",
+      "bytes": 656620,
+      "sha256": "c9f75af83721ebc273219b6c33062aac7781119ebc4d5b9214fa09491cd519e5",
+      "dimensions": [
+        0.6,
+        0.4,
+        0.6
+      ],
+      "triangles": 4336,
+      "up": "+Y",
+      "forward": "+Z",
+      "origin": "bottom-center",
+      "generationOwner": "Kimi",
+      "sourceMethod": "derived-from-retained-tripo-source-no-regeneration",
+      "sourceTaskId": "e4f324ba-0e45-45fe-ad58-7af65aad38d0",
+      "visualSelectionOwner": "Kimi",
+      "delivery": "docs/kimi/最终资产清单.json",
+      "integrationStatus": "runtime catalog registered; main-scene integration and acceptance in progress"
     }
   }
 }

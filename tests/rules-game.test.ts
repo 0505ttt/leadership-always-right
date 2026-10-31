@@ -4,6 +4,7 @@ import { createGame, stepGame } from '../src/rules/game';
 import { runtimeFor } from '../src/rules/runtime';
 import { dropHeld, handleObjectInput, updateObjects } from '../src/rules/objects';
 import { generateWorld } from '../src/world/generate';
+import { deskWorkingPoint } from '../src/world/workstations';
 import { makeWorldQuery } from '../src/world/query';
 
 const idle:InputFrame={moveX:0,moveZ:0,yaw:0,sprint:false,crouchPressed:false,jumpPressed:false,interact:false,interactPressed:false,potPressed:false,dropPressed:false,throwPressed:false,aim:false};
@@ -134,7 +135,8 @@ describe('perception, warning, capture and chairs',()=>{
         const from={x:state.player.x,z:state.player.z};stepGame(state,idle,1/60,world,query);
         expect(query.lineOfSight(from,state.player,1.5,state)).toBe(true);
       }
-      expect(state.player.sticky).toBe(true);expect(state.elapsed-caught).toBeLessThanOrEqual(4);expect(Math.hypot(state.player.x-world.spawn.x,state.player.z-world.spawn.z)).toBeLessThan(.1);expect(state.clocked).toBe(true);
+      const home=deskWorkingPoint(world.desks.find(desk=>desk.home)!);
+      expect(state.player.sticky).toBe(true);expect(state.elapsed-caught).toBeLessThanOrEqual(4);expect(Math.hypot(state.player.x-home.x,state.player.z-home.z)).toBeLessThan(.1);expect(state.clocked).toBe(true);
     }
   });
   it('keeps emergency interaction zones bright when the parent room is dark',()=>{

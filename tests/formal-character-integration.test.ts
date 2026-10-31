@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RuntimeAssets } from '../src/gameplay/assets';
 import { createCharacterUpdater } from '../src/gameplay/character-updates';
+import { runtimeCatalog } from '../src/gameplay/runtime-catalog';
 import { createCharacterLibrary, type CharacterLibrary, type CharacterPoseInput, type CharacterVisual } from '../src/presentation/characters';
 import { createOfficePropVisuals, type OfficePropVisuals } from '../src/presentation/props';
 import { generateWorld } from '../src/world/generate';
@@ -14,7 +15,7 @@ import { OfficeScene } from '../src/presentation/scene';
 import { makeWorldQuery } from '../src/world/query';
 import { validateWorld } from '../src/world/validate';
 
-const assetIds = ['employee-base-v1', 'leader-v1', 'chair-v1', 'pot-v1', 'computer-set-v1', 'box-v1', 'clock-station-v1', 'plant-v1'] as const;
+const assetIds = runtimeCatalog.map(asset=>asset.id);
 type AssetId = typeof assetIds[number];
 const assetBytes = new Map<AssetId, Buffer>();
 const sourcePaths = ['src/presentation/characters.ts', 'src/presentation/character-rig.ts', 'src/presentation/props.ts', 'src/presentation/environment.ts', 'src/presentation/effects.ts', 'src/presentation/scene.ts', 'src/presentation/visual-utils.ts', 'src/gameplay/assets.ts', 'src/gameplay/character-updates.ts', 'src/world/query.ts', 'src/world/generate.ts'];
@@ -92,10 +93,10 @@ const pose = (overrides: Partial<CharacterPoseInput> = {}): CharacterPoseInput =
 
 beforeAll(() => {
  hashesBefore = sourceHashes();
- for (const id of assetIds) assetBytes.set(id, readFileSync(resolve(`public/assets/tripo/${id}.glb`)));
+ for (const {id,path} of runtimeCatalog) assetBytes.set(id, readFileSync(resolve(`public/${path}`)));
 });
 beforeEach(() => {
- vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, fillText() {}, strokeRect() {} }) }) });
+ vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, fillText() {}, strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, bezierCurveTo() {}, stroke() {} }) }) });
  vi.stubGlobal('window', { innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1 });
  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
 });
@@ -118,7 +119,7 @@ afterAll(() => {
  }, null, 2) + '\n');
 });
 
-it.each([618, 42])('instantiates all eight shipped model IDs and keeps station operating points reachable in seed %s', async seed => {
+it.each([618, 42])('instantiates all sixteen shipped model IDs and keeps station operating points reachable in seed %s', async seed => {
  const { assets, library, sources } = await fixture();
  const scene = new OfficeScene({ appendChild() {} } as unknown as HTMLElement, { quality: 'low', sensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 });
  cleanups.push(() => scene.dispose());
@@ -145,6 +146,37 @@ it.each([618, 42])('instantiates all eight shipped model IDs and keeps station o
  scene.load(world);
  expect(scene.getRuleVisuals().modelInstances.find(row => row.assetId === 'computer-set-v1')?.count).toBe(world.desks.length);
 }, 20000);
+
+it('binds chair work to the real desk and leaves exactly one stationary chair after dismount',async()=>{
+ const {assets,library}=await fixture();
+ const scene=new OfficeScene({appendChild(){}} as unknown as HTMLElement,{quality:'low',sensitivity:1,invertY:false,reducedMotion:false,textScale:1});
+ cleanups.push(()=>scene.dispose());scene.useRuntimeAssets(assets,assetIds);scene.useCharacterLibrary(library);
+ const world=generateWorld(42),state=createGame(world),home=world.desks.find(desk=>desk.home)!;
+ scene.load(world);scene.render(state,0,0,'ready',1/60);
+ state.deskHeights[home.id]=1.9;state.player.workStance='chair-standing';state.player.y=.55;
+ for(let frame=0;frame<55;frame++){state.elapsed=100+frame/60;scene.render(state,0,0,'playing',1/60);}
+ const diagnostic=scene.getCharacterDiagnostics(state).find(actor=>actor.id==='player')!;
+ expect(diagnostic.motion?.activity).toBe('chair-work');
+ for(const hand of Object.values(diagnostic.motion!.hands)){
+  expect(hand.error).toBeLessThan(.025);
+  expect(hand.position[1]).toBeCloseTo(1.985,1);
+  const localForward=(hand.position[0]-state.player.x)*Math.sin(home.yaw)+(hand.position[2]-state.player.z)*Math.cos(home.yaw);
+  expect(localForward).toBeGreaterThan(.365);expect(localForward).toBeLessThan(1.215);
+ }
+ const chair=scene.scene.getObjectByName(`desk-chair:${home.id}`)!;
+ expect(chair.visible).toBe(false);
+ state.player.pose='standing';state.player.workStance='seated';state.player.workstationId=null;state.player.y=0;
+ state.elapsed+=1/60;scene.render(state,0,0,'playing',1/60);
+ expect(chair.visible).toBe(true);
+ expect(scene.getCharacterDiagnostics(state).find(actor=>actor.id==='player')!.motion?.chairVisible).toBe(false);
+ expect({x:chair.position.x,z:chair.position.z}).toEqual(home.workPoint);
+ // A rapid real re-seat reverses the running transition; it must not restart
+ // from ground support and visibly drop the body by half a metre.
+ state.player.pose='working';state.player.workStance='chair-standing';state.player.workstationId=home.id;state.player.y=.55;
+ state.elapsed+=1/60;scene.render(state,0,0,'playing',1/60);
+ const reseated=scene.getCharacterDiagnostics(state).find(actor=>actor.id==='player')!.motion!;
+ expect(reseated.support).toBeGreaterThan(.95);expect(reseated.chairVisible).toBe(true);expect(chair.visible).toBe(false);
+},20000);
 
 it('constructs actual employee, colleague and leader skinned actors with shipped animations and semantic anchors', async () => {
  const { library } = await fixture();

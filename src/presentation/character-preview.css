@@ -1,0 +1,11 @@
+.character-preview .asset-gallery__tabs { gap: 4px; padding-top: 20px; padding-bottom: 20px; overflow-y: auto; }
+.character-preview .asset-gallery__tabs button { padding: 11px 12px; line-height: 1.45; }
+.character-preview .asset-gallery__tabs small { display: block; margin-top: 3px; color: #cbd2b7; font-size: 9px; opacity: .58; }
+.character-preview .asset-gallery__info dd { overflow-wrap: anywhere; }
+.character-preview__status { margin: 18px 0 0; padding: 12px 0; border-top: 1px solid #d89a5266; color: #e6ddc7; font-size: 11px; line-height: 1.8; }
+.character-preview__status[data-tone="warning"] { border-color: #c9796b; color: #e4b7a9; }
+.character-preview__status[data-tone="pass"] { border-color: #9bbd91; color: #c4d9b9; }
+.character-preview__asset { display: inline-block; margin-top: 12px; padding: 5px 0; color: #d89a52; font: 10px/1.4 'SFMono-Regular', Consolas, monospace; }
+@media (max-width: 1050px) {
+  .character-preview .asset-gallery__tabs small { display: none; }
+}

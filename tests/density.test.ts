@@ -22,7 +22,7 @@ describe('functional office density',()=>{
  for(const seed of seeds)it(`seed ${seed} has accessible desks, occupants, props and inspection stops`,async()=>{
   const world=generateWorld(seed),state=createGame(world),query=makeWorldQuery(world);
   expect(world.desks).toHaveLength(21);expect(world.colleagues).toHaveLength(7);expect(state.pots).toHaveLength(2);
-  expect(world.props.filter(p=>p.kind==='cake')).toHaveLength(4);expect(world.props.filter(p=>p.kind==='box')).toHaveLength(4);
+  expect(world.props.filter(p=>p.kind==='cake')).toHaveLength(5);expect(world.props.filter(p=>p.kind==='box')).toHaveLength(4);
   expect(new Set(world.colleagues.map(c=>c.deskId)).size).toBe(7);
   for(const room of world.rooms.filter(r=>r.kind==='work')){
    expect(world.desks.filter(d=>d.roomId===room.id&&!d.home)).toHaveLength(6);
@@ -52,11 +52,11 @@ describe('functional office density',()=>{
   const targets=[...world.stations.map(s=>({x:s.x+Math.sin(s.yaw)*.95,z:s.z+Math.cos(s.yaw)*.95})),...world.exits.map(e=>({x:e.x-e.outward.x*.95,z:e.z-e.outward.z*.95}))];
   for(const target of targets){
    await new Promise<void>(resolve=>setTimeout(resolve,0));
-   expect(wide.query.path(world.spawn,target,wide.state).length,`seed ${seed}`).toBeGreaterThan(0);
-   expect(home.query.path(target,world.spawn,home.state).length,`seed ${seed}`).toBeGreaterThan(0);
+   expect(wide.query.path(world.spawn,target,wide.state).length,`seed ${seed} spawn=${JSON.stringify(world.spawn)} target=${JSON.stringify(target)}`).toBeGreaterThan(0);
+   expect(home.query.path(target,world.spawn,home.state).length,`seed ${seed} spawn=${JSON.stringify(world.spawn)} target=${JSON.stringify(target)}`).toBeGreaterThan(0);
   }
  },60_000);
- it('preserves the sparse 618 reproduction layout',()=>{
-  const world=generateWorld(618);expect(world.desks).toHaveLength(7);expect(world.colleagues).toHaveLength(4);expect(world.props).toHaveLength(4);expect(world.patrol).toHaveLength(10);
+ it('keeps the fallback furniture layout with the new intro cake',()=>{
+  const world=generateWorld(618);expect(world.desks).toHaveLength(7);expect(world.colleagues).toHaveLength(4);expect(world.props).toHaveLength(5);expect(world.patrol).toHaveLength(10);
  });
 });

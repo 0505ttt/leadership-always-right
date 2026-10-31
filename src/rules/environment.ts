@@ -1,12 +1,13 @@
 import type { ActiveRule, GameState, RuleKind, Vec2, Wall, WorldDef, WorldQuery } from '../contracts/game';
-import { announceMessage, clamp, copyPoint, distance, logEvent, playerHeight, playerSightHeight, runtimeFor } from './runtime';
+import { announceMessage, clamp, copyPoint, distance, logEvent, playerHeight, playerSightHeight, runtimeFor, setWorkingStance, WORK_CHAIR_HEIGHT } from './runtime';
 import { attachPot } from './objects';
 import { litAt } from './player';
 import { visible } from './boss';
+import { beginInspection, cancelInspection } from './inspection';
 
 const definitions:Record<Exclude<RuleKind,'return'>,{quote:string;effect:string;duration:number}>={
   cake:{quote:'把饼画大一点，大家才有奔头。',effect:'目标饼膨胀 · 挡双方视线 · 按E推行',duration:22},
-  desk:{quote:'这个项目，提高一下优先级。',effect:'目标桌抬到1.9米 · 可从桌下绕行',duration:20},
+  desk:{quote:'所有人的项目，都提高一下优先级。',effect:'全工位抬到1.9米 · 回本人工位站椅办公；粘椅可滚回装忙',duration:20},
   pot:{quote:'这锅，你先背起来。',effect:'现有锅转移 · 可断视线避开',duration:.4},
   flow:{quote:'这个流程，你给我再走一遍。',effect:'标记通道逆向阻力 · 顺箭头不减速',duration:16},
   transparent:{quote:'有问题，就透明一点。',effect:'局部隔断透明 · 碰撞仍保留',duration:18},
@@ -57,7 +58,9 @@ function wallFace(wall:Wall,observer:Vec2):Vec2 {
 function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|null {
   const runtime=runtimeFor(state),boss=state.boss;
   const active=state.rules.filter(rule=>spatial(rule)&&rule.phase!=='restoring');
-  const occupied=new Set(active.map(rule=>rule.roomId));
+  // A global desk lift may combine with cake/flow/transparent effects. Only a
+  // lowered ceiling over a chair-standing worker is mutually exclusive.
+  const occupied=new Set(active.filter(rule=>rule.kind!=='desk').map(rule=>rule.roomId));
   const playerRoom=query.roomAt(state.player)?.id;
   const patrolRoom=query.roomAt(world.patrol[boss.patrolIndex%Math.max(1,world.patrol.length)]??boss)?.id;
   const knownRooms=new Set([query.roomAt(boss)?.id,patrolRoom]);
@@ -73,6 +76,20 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
   const observable=(point:Vec2,roomId:number)=>localRooms.has(roomId)&&distance(state.player,point)<=12&&query.lineOfSight(state.player,point,playerSightHeight(state),state);
   const kinds:Exclude<RuleKind,'return'>[]=['cake','desk','pot','flow','transparent','pressure'];
   for(let index=kinds.length-1;index>0;index--){const swap=Math.floor(runtime.random()*(index+1));[kinds[index],kinds[swap]]=[kinds[swap],kinds[index]];}
+  const intro=state.props.find(prop=>prop.id==='cake-intro');
+  if(intro&&runtime.lastEnvironment<0) {
+    const target=[intro,...state.props.filter(prop=>prop.kind==='cake'&&prop!==intro)]
+      .find(prop=>safeCake(state,prop.id,world,query)&&observable(prop,prop.roomId)
+        &&(prop===intro||(distance(boss,prop)<=8&&query.lineOfSight(boss,prop,1.3,state))));
+    // A player may leave immediately. Wait for a genuinely observable cake;
+    // never fake the intro elsewhere or lock movement to force them to watch.
+    if(!target)return null;
+    const definition=definitions.cake;
+    const rule:ActiveRule={id:runtime.nextRuleId++,kind:'cake',quote:definition.quote,
+      effect:`眼前的愿景饼：${definition.effect}`,targetId:target.id,roomId:target.roomId,
+      phase:'warning',remaining:3,duration:definition.duration,age:0};
+    runtime.rules.set(rule.id,{});return rule;
+  }
   // Prefer observable effects across all kinds, then retain legitimate remote commands.
   // The fallback is seeded, never ranked by a hidden player's live location.
   for(const localOnly of [true,false]) {
@@ -90,10 +107,12 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
       const target=choose(targets,target=>target.roomId);
       if(!target)continue;targetId=target.id;roomId=target.roomId;
     } else if(kind==='desk') {
-      const targets=world.desks.filter(desk=>!occupied.has(desk.roomId)&&(state.deskHeights[desk.id]??.75)<.76
-        &&!state.rules.some(rule=>rule.kind==='desk'&&rule.targetId===desk.id)
-        &&(desk.home||(distance(boss,desk)<10&&query.lineOfSight(boss,desk,1.4,state))));
-      const target=choose(targets,target=>target.roomId);
+      // It is a global rule; reject conflicting lowered ceilings over any employee
+      // workstation rather than silently raising only the chosen nearby desk.
+      if(state.rules.some(rule=>rule.kind==='desk')||world.desks.some(desk=>(state.deskHeights[desk.id]??.75)>.76
+        ||state.rules.some(rule=>rule.kind==='pressure'&&rule.roomId===desk.roomId)))continue;
+      const target=world.desks.find(desk=>desk.home)??world.desks[0];
+      if(localOnly&&target&&!observable(target,target.roomId))continue;
       if(!target)continue;targetId=target.id;roomId=target.roomId;
     } else if(kind==='pot') {
       const sources=state.pots.filter(pot=>{const owner=actor(state,pot.owner);return owner&&pot.phase==='attached'&&pot.cooldown<=0&&visible(state,boss,owner,6,1,query);});
@@ -115,6 +134,7 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
     } else {
       const homeRoom=world.desks.find(desk=>desk.home)?.roomId;
       const targets=world.rooms.filter(room=>room.pressure&&room.id!==homeRoom&&!occupied.has(room.id)&&knownRooms.has(room.id)
+        &&!world.desks.some(desk=>desk.roomId===room.id&&(state.deskHeights[desk.id]??.75)>.85)
         &&!state.rules.some(rule=>rule.kind==='pressure'&&rule.roomId===room.id));
       const target=choose(targets,target=>target.id,target=>localRooms.has(target.id));
       if(!target)continue;targetId=`room-${target.id}`;roomId=target.id;
@@ -122,6 +142,7 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
     const definition=definitions[kind];
     const location=localOnly?'':roomId===playerRoom?' · 目标暂不可见':' · 目标在其他房间';
     const rule:ActiveRule={id:runtime.nextRuleId++,kind,quote:definition.quote,effect:`${targetLabel(state,world,kind,targetId,roomId,sourceOwner)}：${definition.effect}${location}`,targetId,roomId,phase:'warning',remaining:3,duration:definition.duration,age:0};
+    if(kind==='desk'){rule.targetIds=world.desks.map(desk=>desk.id);rule.affectedRoomIds=[...new Set(world.desks.map(desk=>desk.roomId))];}
     runtime.rules.set(rule.id,{potId,sourceOwner});
     return rule;
   }
@@ -132,6 +153,7 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
 function cancelRule(state:GameState,rule:ActiveRule,reason:string):void {
   state.rules=state.rules.filter(item=>item!==rule);
   runtimeFor(state).rules.delete(rule.id);
+  cancelInspection(state,rule.id);
   announceMessage(state,reason,3);logEvent(state,`rule:${rule.kind}:cancelled`);
 }
 
@@ -156,7 +178,9 @@ function activate(state:GameState,rule:ActiveRule,world:WorldDef,query:WorldQuer
     if(!attachPot(state,pot,rule.targetId,copyPoint(source))){cancelRule(state,rule,'目标已经有锅，不能再叠一口。');return;}
   }
   if(rule.kind==='desk') {
-    if(runtime.workingDesk===rule.targetId){state.player.pose=state.player.sticky?'rolling':'standing';runtime.workingDesk=null;announceMessage(state,'桌子升高了，电脑暂时够不到；可以换工位装忙。');}
+    rule.targetIds=world.desks.map(desk=>desk.id);
+    rule.affectedRoomIds=[...new Set(world.desks.map(desk=>desk.roomId))];
+    announceMessage(state,'全工位升高：站上自己的椅子办公；屁股粘椅时滚回自己的工位也算。',5);
   }
   rule.phase='active';rule.remaining=rule.duration;rule.age=0;
   if(rule.kind==='cake')state.props.find(prop=>prop.id===rule.targetId)!.large=true;
@@ -170,23 +194,29 @@ function activate(state:GameState,rule:ActiveRule,world:WorldDef,query:WorldQuer
 }
 
 function restoreDesk(state:GameState,rule:ActiveRule,dt:number,world:WorldDef):boolean {
-  const desk=world.desks.find(item=>item.id===rule.targetId);
-  if(!desk)return true;
+  let complete=true,blocked=false;
+  for(const desk of world.desks) {
   let minimum=.75;
   const current=state.deskHeights[desk.id]??.75;
   const under=(point:Vec2)=>Math.abs(point.x-desk.x)<1.1&&Math.abs(point.z-desk.z)<.73;
   if(under(state.player)&&state.player.y<current-.01)minimum=Math.max(minimum,playerHeight(state)+state.player.y+.16);
   if(under(state.boss))minimum=Math.max(minimum,1.96);
-  const next=Math.max(Math.min(current,minimum),current-(1.9-.75)*dt/.8);
+  // A cached route can bring an actor under a desk after descent has started.
+  // Allow a safety lift back to the raised limit; merely freezing its current
+  // height can strand the leader below the navigation clearance indefinitely.
+  const next=Math.max(Math.min(1.9,minimum),current-(1.9-.75)*dt/.8);
   state.deskHeights[desk.id]=next<=.751?.75:next;
-  rule.effect=`${targetLabel(state,world,rule.kind,rule.targetId,rule.roomId)}：${minimum>.75?'复位受阻 · 桌下有人，离开后安全下降':'桌面正在安全复位'}`;
-  return next<=.751;
+    complete=complete&&next<=.751;blocked=blocked||minimum>.75;
+  }
+  rule.effect=blocked?'全工位复位受阻 · 桌下有人的工位暂缓下降':'全工位正在安全复位';
+  return complete;
 }
 
 function safePressureHeight(state:GameState,roomId:number,desired:number,query:WorldQuery):number {
+  for(const colleague of state.colleagues)if(colleague.roomId===roomId&&colleague.workStance==='chair-standing')desired=Math.max(desired,(colleague.y??WORK_CHAIR_HEIGHT)+1.8);
   if(query.roomAt(state.player)?.id!==roomId)return desired;
   // Controllable standing players can duck; seated and dragged players cannot.
-  const body=state.player.sticky||state.player.pose==='working'?1.42:state.player.pose==='dragged'?1.75:.9;
+  const body=state.player.pose==='working'?playerHeight(state):state.player.sticky?1.42:state.player.pose==='dragged'?1.75:.9;
   return Math.max(desired,state.player.y+body+.05);
 }
 
@@ -217,7 +247,7 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
           } else prop.scale=desired;
         }
       }
-      if(rule.kind==='desk')state.deskHeights[rule.targetId]=.75+(1.9-.75)*clamp(rule.age/.8,0,1);
+      if(rule.kind==='desk')for(const desk of world.desks)state.deskHeights[desk.id]=.75+(1.9-.75)*clamp(rule.age/.8,0,1);
       if(rule.remaining<=0&&rule.phase==='active'){rule.phase='restoring';rule.age=0;logEvent(state,`rule:${rule.kind}:ended`);}
     }
     if(rule.phase==='restoring') {
@@ -236,10 +266,24 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
       if(complete){state.rules=state.rules.filter(item=>item!==rule);runtime.rules.delete(rule.id);}
     }
   }
-  if(state.player.pose==='dragged'||state.elapsed<15||runtime.pendingReturn||state.rules.some(rule=>rule.phase==='warning')||state.elapsed<runtime.nextEnvironment)return;
+  for(const colleague of state.colleagues) {
+    colleague.workStance=(state.deskHeights[colleague.deskId]??.75)>.85?'chair-standing':'seated';
+    colleague.y=colleague.workStance==='chair-standing'?WORK_CHAIR_HEIGHT:0;
+  }
+  if(state.player.pose==='working') {
+    const deskId=state.player.workstationId??runtime.workingDesk;
+    if(deskId)setWorkingStance(state,deskId);
+  }
+  // Forced/test overlaps and a newly elevated worker must be safe in this same
+  // state update, regardless of the order the two rules were inserted.
+  for(const roomId of state.pressureRooms)state.pressureHeights[roomId]=safePressureHeight(state,roomId,state.pressureHeights[roomId]??1.6,query);
+  const firstWindow=state.props.some(prop=>prop.id==='cake-intro')?3:15;
+  if(state.player.pose==='dragged'||state.inspection||state.elapsed<firstWindow||runtime.pendingReturn||runtime.orderActive
+    ||['search','chase','warning','leave'].includes(state.boss.mode)||state.rules.some(rule=>rule.phase==='warning')||state.elapsed<runtime.nextEnvironment)return;
   if(state.elapsed-runtime.lastEnvironment<18)return;
   const rule=selectRule(state,world,query);
   if(!rule){runtime.nextEnvironment=state.elapsed+3;return;}
+  if(!beginInspection(state,rule,world,query)){runtime.rules.delete(rule.id);runtime.nextEnvironment=state.elapsed+3;return;}
   state.rules.push(rule);runtime.lastEnvironment=state.elapsed;runtime.lastKinds[rule.kind]=state.elapsed;
   runtime.nextEnvironment=state.elapsed+24+runtime.random()*12;
   state.history.unshift(`${rule.quote}（${rule.effect}）`);state.history=state.history.slice(0,30);

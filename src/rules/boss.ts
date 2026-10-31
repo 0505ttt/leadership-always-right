@@ -1,13 +1,15 @@
 import type { GameState, Vec2, WorldDef, WorldQuery } from '../contracts/game';
-import { announceMessage, copyPoint, distance, flowFactor, forward, logEvent, playerSightHeight, runtimeFor } from './runtime';
+import { announceMessage, copyPoint, distance, flowFactor, forward, leaveWorkstation, logEvent, playerSightHeight, runtimeFor, setWorkingStance } from './runtime';
 import { litAt } from './player';
 import { dropHeld, settlePotForCapture } from './objects';
 import { switchOperatingPoint } from '../world/query';
+import { cancelInspection, updateInspection } from './inspection';
+import { deskWorkingPoint } from '../world/workstations';
 
-export function visible(state:GameState,observer:Vec2&{yaw:number},target:Vec2,range:number,height:number,query:WorldQuery):boolean {
+export function visible(state:GameState,observer:Vec2&{yaw:number;lookYaw?:number},target:Vec2,range:number,height:number,query:WorldQuery):boolean {
   const length=distance(observer,target);
   if(length>range||!litAt(state,target,query))return false;
-  const look=forward(observer.yaw);
+  const look=forward(observer.lookYaw??observer.yaw);
   if(length>.1&&((target.x-observer.x)*look.x+(target.z-observer.z)*look.z)/length<Math.cos(50*Math.PI/180))return false;
   return query.lineOfSight(observer,target,height,state);
 }
@@ -25,6 +27,7 @@ function clearOrder(state:GameState):void {
 
 export function requestReturnWarning(state:GameState):void {
   const runtime=runtimeFor(state);
+  if(state.inspection)return;
   if(runtime.orderActive||state.rules.some(rule=>rule.kind==='return'&&rule.phase==='warning'))return;
   if(state.rules.some(rule=>rule.phase==='warning')){runtime.pendingReturn=true;return;}
   const rule={id:runtime.nextRuleId++,kind:'return' as const,quote:'让我逮着，就回工位，屁股给我粘在椅子上。',effect:'3秒后追责 · 亮处接触0.5秒才会被抓',targetId:'player',roomId:state.roomId,phase:'warning' as const,remaining:3,duration:0,age:0};
@@ -62,12 +65,20 @@ function moveBoss(state:GameState,target:Vec2,speed:number,dt:number,world:World
   const dx=point.x-boss.x,dz=point.z-boss.z,length=Math.hypot(dx,dz);
   if(length<.001)return true;
   const direction={x:dx/length,z:dz/length};
-  boss.yaw=Math.atan2(direction.x,direction.z);
+  const heading=Math.atan2(direction.x,direction.z);
+  if(state.inspection&&boss.mode==='search') {
+    const turn=Math.atan2(Math.sin(heading-boss.yaw),Math.cos(heading-boss.yaw));
+    boss.yaw+=Math.max(-3.5*dt,Math.min(3.5*dt,turn));
+    // A searcher must turn before sprinting around a corner; instant 7.2 m/s
+    // reversals would erase a player's opportunity to use cover.
+    speed*=Math.max(0,Math.cos(turn));
+  } else boss.yaw=heading;
   const room=query.roomAt(boss);
-  const ceiling=room&&state.pressureRooms.includes(room.id)?(state.pressureHeights[room.id]??1.6):2.8;
+  const ceiling=Math.min(room&&state.pressureRooms.includes(room.id)?(state.pressureHeights[room.id]??1.6):2.8,
+    query.clearance(boss,state),query.clearance({x:boss.x+direction.x*.55,z:boss.z+direction.z*.55},state));
   const low=ceiling<1.85;
   if(low)speed=Math.min(speed,1.6);
-  speed=Math.max(1.3,speed*flowFactor(state,boss,direction,room?.id??-1,world.rooms));
+  speed=Math.max(state.inspection&&boss.mode==='search'?0:1.3,speed*flowFactor(state,boss,direction,room?.id??-1,world.rooms));
   // Environment announcements deliberately slow the leader below the ordinary movement floor.
   if(state.rules.some(rule=>rule.kind!=='return'&&rule.phase==='warning'))speed=Math.min(speed,1.2);
   const amount=Math.min(length,speed*dt),before=copyPoint(boss);
@@ -109,13 +120,12 @@ function beginDrag(state:GameState,world:WorldDef,query:WorldQuery):boolean {
   runtime.dragTravelled=0;runtime.dragElapsed=0;
   state.dragPath=path.slice(1);state.dragProgress=0;
   state.player.pose='dragged';state.player.vy=0;
+  leaveWorkstation(state);cancelInspection(state);
   state.player.moving=false;state.player.sprinting=false;state.aiming=false;
   state.boss.mode='drag';state.boss.path=[];
   state.interaction=null;runtime.interactionId='';runtime.interactionElapsed=0;
   settlePotForCapture(state);dropHeld(state,world,query);
-  if(home) {
-    for(const rule of state.rules)if(rule.kind==='desk'&&rule.targetId===home.id&&rule.phase==='active'){rule.phase='restoring';rule.remaining=0;rule.age=0;}
-  }
+  // Retain raised desks: sticky players may roll home without climbing.
   announceMessage(state,'回工位！屁股别离开椅子。',3.2);
   logEvent(state,'boss:caught');return true;
 }
@@ -153,8 +163,19 @@ export function updateDrag(state:GameState,dt:number,world:WorldDef,query:WorldQ
     }
   }
   if(!state.dragPath.length&&runtime.dragElapsed>=2) {
+    const home=world.desks.find(d=>d.home);
+    if(home) {
+      // Navigation ends at the clear approach anchor. The last short movement
+      // into the chair uses the same collision solver as dragging, not a teleport.
+      const destination=deskWorkingPoint(home);
+      const docked=query.move(player,{x:destination.x-player.x,z:destination.z-player.z},.3,playerHeightForDrag(state),state,player.y);
+      player.x=docked.x;player.z=docked.z;
+      if(distance(player,destination)>.01)return true;
+      player.yaw=home.yaw;
+    }
     player.sticky=true;player.pose='working';player.protection=8;
-    runtime.workingDesk=world.desks.find(d=>d.home)?.id??null;
+    const homeId=home?.id;
+    if(homeId)setWorkingStance(state,homeId);
     state.catches++;
     state.boss.evidenceUntil=0;state.boss.evidenceId=null;state.boss.contactFor=0;
     runtime.explicitEvent=null;runtime.eventSeenFor=0;runtime.pendingReturn=false;
@@ -175,7 +196,7 @@ export function updateDrag(state:GameState,dt:number,world:WorldDef,query:WorldQ
 function inspectLights(state:GameState,dt:number,world:WorldDef,query:WorldQuery):boolean {
   const runtime=runtimeFor(state),boss=state.boss;
   const room=query.roomAt(boss);
-  if(!room||room.permanentLight||state.lights[room.id]!==false||!['search','chase'].includes(boss.mode)) {runtime.lightUseFor=0;return false;}
+  if(!room||room.permanentLight||state.lights[room.id]!==false||!['search','chase','inspection'].includes(boss.mode)) {runtime.lightUseFor=0;return false;}
   const actual=world.rooms.find(item=>item.id===room.id)!;
   if(distance(boss,actual.switch)>1.15){moveBoss(state,switchOperatingPoint(actual),boss.mode==='chase'?4.1:2,dt,world,query);runtime.lightUseFor=0;return true;}
   if((state.switchCooldown[room.id]??0)>0){runtime.lightUseFor=0;return false;}
@@ -187,6 +208,13 @@ function inspectLights(state:GameState,dt:number,world:WorldDef,query:WorldQuery
 export function updateBoss(state:GameState,dt:number,world:WorldDef,query:WorldQuery):void {
   const boss=state.boss,player=state.player,runtime=runtimeFor(state);
   if(player.pose==='dragged')return;
+  if(updateInspection(state,dt,world,query,{
+    seesPlayer:()=>visible(state,boss,player,10,playerSightHeight(state),query),
+    move:(target,speed)=>moveBoss(state,target,speed,dt,world,query),
+    capture:()=>beginDrag(state,world,query),
+    inspectLights:()=>inspectLights(state,dt,world,query),
+  }))return;
+  boss.lookYaw=boss.yaw;
   if(boss.mode==='leave') {
     const home=world.desks.find(d=>d.home)?.seat??world.spawn;
     if(runtime.leaveTarget)moveBoss(state,runtime.leaveTarget,2.6,dt,world,query);

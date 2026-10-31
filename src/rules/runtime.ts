@@ -44,6 +44,9 @@ export interface Runtime {
   propFlights: Map<string, { from: Vec2; to: Vec2; elapsed: number; duration: number }>;
   lastBubbleIndex: number;
   sprintExhausted: boolean;
+  inspectionSearchPoints: Vec2[];
+  inspectionSearchIndex: number;
+  inspectionPauseUntil: number;
 }
 
 const runtimes = new WeakMap<GameState, Runtime>();
@@ -61,8 +64,9 @@ export function seededRandom(seed: number): () => number {
 
 export function initRuntime(state: GameState, homeId: string | null): Runtime {
   const random = seededRandom(state.seed ^ 0x1b0a55);
+  const hasIntro=state.props.some(prop=>prop.id==='cake-intro');
   const runtime: Runtime = {
-    random, nextEnvironment: 15 + random() * 3, lastEnvironment: -100,
+    random, nextEnvironment: (hasIntro?3:15) + random() * (hasIntro?1:3), lastEnvironment: -100,
     lastKinds: {}, nextRuleId: 1, rules: new Map(), orderActive: false,
     pendingReturn: false, workCalm: 0, eventSerial: 0, explicitEvent: null,
     observedEvents: new Set(), eventSeenId: '', eventSeenFor: 0,
@@ -73,6 +77,7 @@ export function initRuntime(state: GameState, homeId: string | null): Runtime {
     potReturningToHand: new Map(), throwWindup: new Map(),
     potReleasePosition: new Map(), reports: [], activeReport: null, propFlights: new Map(),
     lastBubbleIndex: -1, sprintExhausted: false,
+    inspectionSearchPoints: [], inspectionSearchIndex: 0, inspectionPauseUntil: 0,
   };
   runtimes.set(state, runtime);
   return runtime;
@@ -107,12 +112,31 @@ export function explicitAction(state: GameState, kind: string, duration = 1.4): 
 }
 
 export function playerHeight(state: GameState): number {
+  if (state.player.pose === 'working' && state.player.workStance === 'chair-standing' && !state.player.sticky) return 1.75;
   return state.player.pose === 'crouching' ? 0.9 : state.player.pose === 'working' || state.player.sticky ? 1.42 : 1.75;
 }
 
 /** Body visibility sample: crouching really lowers it; an enlarged cake masks both sides. */
 export function playerSightHeight(state: GameState): number {
-  return (state.player.pose==='crouching'?.65:state.player.pose==='working'||state.player.sticky?.9:1.05)+state.player.y;
+  return (state.player.pose==='crouching'?.65:state.player.pose==='working'&&state.player.workStance!=='chair-standing'||state.player.sticky?.9:1.05)+state.player.y;
+}
+
+/** Gameplay support for the seat, independent of a particular chair mesh. */
+export const WORK_CHAIR_HEIGHT = .55;
+
+export function leaveWorkstation(state:GameState):void {
+  runtimeFor(state).workingDesk=null;
+  state.player.workstationId=null;
+  state.player.workStance='seated';
+}
+
+export function setWorkingStance(state:GameState,deskId:string):void {
+  const player=state.player;
+  runtimeFor(state).workingDesk=deskId;
+  player.workstationId=deskId;
+  player.workStance=!player.sticky&&(state.deskHeights[deskId]??.75)>.85?'chair-standing':'seated';
+  player.y=player.workStance==='chair-standing'?WORK_CHAIR_HEIGHT:0;
+  player.vy=0;
 }
 
 export function flowFactor(state: GameState, position: Vec2, direction: Vec2, roomId: number, rooms: {id:number;x:number;z:number;w:number;d:number}[]): number {

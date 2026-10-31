@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Desk, Exit, GameState, Station, WorldDef } from '../contracts/game';
+import { deskWorkingPoint } from '../world/workstations';
 import { VisualResourcePool, addBox, addCylinder, makeDeterministicRandom, makeLabel } from './visual-utils';
 
 export type CharacterAnchorKind = 'hand' | 'back' | 'crown';
@@ -9,6 +10,8 @@ export interface PropAssetAdapter {
   instantiate(id: 'chair-v1' | 'pot-v1'): THREE.Object3D;
   release?(id: 'chair-v1' | 'pot-v1', instance: THREE.Object3D): void;
 }
+
+export type OfficePropModelId = 'box-v1' | 'clock-station-v1' | 'cake-v2' | 'exit-door-v1';
 
 export interface OfficePropVisuals {
   readonly root: THREE.Group;
@@ -154,19 +157,25 @@ export function createStationVisual(pool: VisualResourcePool, station: Station, 
   return group;
 }
 
-export function createExitVisual(pool: VisualResourcePool, exit: Exit): THREE.Group {
-  const m = materials(pool);
+export function createExitVisual(pool: VisualResourcePool, exit: Exit, model?: THREE.Object3D): THREE.Group {
   const group = new THREE.Group();
   group.name = `exit-door:${exit.id}`;
   group.position.set(exit.x + exit.outward.x * .65, 0, exit.z + exit.outward.z * .65);
   group.rotation.y = Math.atan2(-exit.outward.x, -exit.outward.z);
-  addBox(group, pool, m.graphite, [2.18, 2.28, .12], [0, 1.14, 0]);
-  addBox(group, pool, m.metal, [1.65, .035, .065], [0, 1.02, .095]);
-  addBox(group, pool, m.green, [1.82, .38, .07], [0, 1.94, .085]);
-  const sign = makeLabel(pool, '安全出口  →', { width: 1.68, height: .29, foreground: '#eff3dc', background: '#3f6c52', fontSize: 66, emissive: true });
-  sign.position.set(0, 1.94, .125);
+  if (model) group.add(model);
+  else {
+    const m = materials(pool);
+    addBox(group, pool, m.graphite, [2.18, 2.28, .12], [0, 1.14, 0]);
+    addBox(group, pool, m.metal, [1.65, .035, .065], [0, 1.02, .095]);
+    addBox(group, pool, m.green, [1.82, .38, .07], [0, 1.94, .085]);
+  }
+  // Match the delivered sign's 1.055 × .215 m face and bottom-centered anchor.
+  const sign = makeLabel(pool, '安全出口  →', { width: model ? 1.02 : 1.68, height: model ? .19 : .29, foreground: '#eff3dc', background: '#3f6c52', fontSize: 66, emissive: true });
+  sign.name = `exit-sign:${exit.id}`;
+  sign.position.set(0, model ? 2.1525 : 1.94, model ? .052 : .125);
   group.add(sign);
   const instruction = makeLabel(pool, '打卡后按住 E 开门', { width: 1.5, height: .2, foreground: '#ded8bd', background: '#293c34', fontSize: 47 });
+  instruction.name = `exit-instruction:${exit.id}`;
   instruction.position.set(0, 1.52, .068);
   group.add(instruction);
   return group;
@@ -187,9 +196,14 @@ function fallbackChair(pool: VisualResourcePool): THREE.Group {
   return group;
 }
 
-function cakeVisual(pool: VisualResourcePool): THREE.Group {
-  const m = materials(pool);
+function cakeVisual(pool: VisualResourcePool, model?: THREE.Object3D): THREE.Group {
   const group = new THREE.Group();
+  // Rule scaling belongs to this wrapper; preserve the authored GLB transforms.
+  if (model) {
+    group.add(model);
+    return group;
+  }
+  const m = materials(pool);
   addCylinder(group, pool, pool.material({ color: 0xc99b5b, roughness: .92 }), [.29, .3], .33, [0, .175, 0], 32);
   addCylinder(group, pool, pool.material({ color: 0xead3a0, roughness: .88 }), [.292, .292], .035, [0, .355, 0], 32);
   const label = makeLabel(pool, '愿 景', { width: .36, height: .19, foreground: '#8b513c', background: 'transparent', transparent: true, fontSize: 68 });
@@ -223,7 +237,7 @@ function fallbackPot(pool: VisualResourcePool): THREE.Group {
   return group;
 }
 
-export function createOfficePropVisuals(world: WorldDef, options: { assets?: PropAssetAdapter; models?: (id:'box-v1'|'clock-station-v1')=>THREE.Object3D|undefined } = {}): OfficePropVisuals {
+export function createOfficePropVisuals(world: WorldDef, options: { assets?: PropAssetAdapter; models?: (id: OfficePropModelId) => THREE.Object3D | undefined } = {}): OfficePropVisuals {
   const pool = new VisualResourcePool();
   const root = new THREE.Group();
   root.name = 'office-props';
@@ -241,14 +255,15 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
 
   for (const desk of world.desks) {
     const chair = asset('chair-v1', () => fallbackChair(pool));
-    chair.position.set(desk.seat.x, 0, desk.seat.z);
+    const workingPoint=deskWorkingPoint(desk);
+    chair.position.set(workingPoint.x, 0, workingPoint.z);
     chair.rotation.y = desk.yaw;
     chair.name = `desk-chair:${desk.id}`;
     root.add(chair);
     chairs.set(desk.id, chair);
   }
   for (const prop of world.props) {
-    const object = prop.kind === 'cake' ? cakeVisual(pool) : options.models?.('box-v1')??boxVisual(pool);
+    const object = prop.kind === 'cake' ? cakeVisual(pool, options.models?.('cake-v2')) : options.models?.('box-v1')??boxVisual(pool);
     object.name = `world-prop:${prop.id}`;
     object.position.set(prop.x, 0, prop.z);
     root.add(object);
@@ -256,7 +271,7 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
   }
   for (const station of world.stations) root.add(createStationVisual(pool, station,options.models?.('clock-station-v1')));
   for (const exit of world.exits) {
-    const visual = createExitVisual(pool, exit);
+    const visual = createExitVisual(pool, exit, options.models?.('exit-door-v1'));
     root.add(visual);
     exits.set(exit.id, visual);
   }
@@ -288,7 +303,10 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
       const occupied = new Set(state.colleagues.map(colleague => colleague.deskId));
       if (state.player.sticky) for (const desk of world.desks) if (desk.home) occupied.add(desk.id);
       if (state.player.pose === 'working') {
-        for (const desk of world.desks) if (Math.hypot(state.player.x - desk.seat.x, state.player.z - desk.seat.z) < .4) occupied.add(desk.id);
+        for (const desk of world.desks) {
+          const point=deskWorkingPoint(desk);
+          if (state.player.workstationId===desk.id||Math.hypot(state.player.x-point.x,state.player.z-point.z)<.4)occupied.add(desk.id);
+        }
       }
       for (const [deskId, chair] of chairs) chair.visible = !occupied.has(deskId);
       for (const exit of world.exits) exits.get(exit.id)!.visible = !state.openedExits.includes(exit.id);
@@ -317,7 +335,7 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
           pots.set(pot.id, visual);
         }
         const owner = pot.owner;
-        const seated = owner === 'player' ? state.player.pose === 'working' || state.player.sticky : true;
+        const seated = owner === 'player' ? (state.player.pose === 'working' && state.player.workStance !== 'chair-standing') || state.player.sticky : state.colleagues.find(c=>c.id===owner)?.workStance !== 'chair-standing';
         const held = pot.phase === 'held' || pot.phase === 'drawing';
         const anchor = anchors(owner, held ? 'hand' : seated ? 'crown' : 'back');
         if (!anchor) {

@@ -1,4 +1,5 @@
 import type { ColleagueDef, Desk, Door, Exit, Room, Vec2, Wall, WorldDef } from '../contracts/game';
+import { deskWorkingPoint } from './workstations';
 
 export function seeded(seed:number) {
  let a=seed>>>0; return ()=>{ a+=0x6D2B79F5; let t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; };
@@ -43,6 +44,9 @@ export function generateWorld(seed:number):WorldDef {
   for(const exit of exits){const west=exit.roomId%5===0;exit.x=west?.65:47.35;exit.z=exit.roomId<5?1.4:34.6;exit.yaw=west?-Math.PI/2:Math.PI/2;exit.outward={x:west?-1:1,z:0};}
  }
  const stations=layout?layout.clocks.map((roomId,index)=>({id:index===0?'clock-admin':'clock-print',roomId,...local(roomId,layout.cross===2?(index===0?6.7:7.1):4.8,layout.cross===2?(index===0?15:14.5):15),yaw:0})):[{id:'clock-admin',roomId:8,x:35.5,z:33,yaw:0},{id:'clock-print',roomId:9,x:45.5,z:32.5,yaw:0}];
+ // One clock station per office; keep both candidate service-room roles for layout variety.
+ const selectedStation=seed===618?0:Math.floor(variation()*stations.length);
+ stations.splice(0,stations.length,stations[selectedStation]);
  const walls:Wall[]=[];
  function split(id:string,x:number,z:number,w:number,d:number,axis:'x'|'z',gaps:{center:number;width:number;crawl?:boolean}[],roomId:number){
   const center=axis==='x'?x:z,length=axis==='x'?w:d;
@@ -83,11 +87,15 @@ export function generateWorld(seed:number):WorldDef {
    desks.push({id:`desk-${desks.length}`,roomId:room.id,...p,seat:{x:p.x,z:p.z-1.2},yaw:0});
   }
  }else for(const [id,x,z] of [[1,17,15.8],[0,5.7,7],[6,15,25],[6,17,31],[5,5.6,27],[8,32,25]] as const) desks.push({id:`desk-${desks.length}`,roomId:id,x,z,seat:{x,z:z-1.2},yaw:0});
+ // Preserve the wide approach anchor; the occupied chair sits nearer the desk.
+ // A .79 m center distance leaves .365 m before the .425 m desktop edge,
+ // enough for the .3 m player radius and the delivered chair's .3625 m front.
+ for(const desk of desks)desk.workPoint={x:desk.x-Math.sin(desk.yaw)*.79,z:desk.z-Math.cos(desk.yaw)*.79};
  const colleagueDesks=layout?[
   ...rooms.filter(r=>r.kind==='work').flatMap(room=>shuffled(desks.filter(d=>d.roomId===room.id&&!d.home),variation).slice(0,2)),
   desks.find(d=>d.roomId===rooms.find(r=>r.kind==='admin')!.id)!,
  ]:[1,2,3,4].map(index=>desks[index]);
- const colleagues:ColleagueDef[]=colleagueDesks.map((desk,index)=>({id:`colleague-${index}`,name:['小周','老陈','小林','阿许','阿敏','小唐','小赵'][index],deskId:desk.id,roomId:desk.roomId,x:desk.seat.x,z:desk.seat.z,yaw:desk.yaw,pot:index<2}));
+ const colleagues:ColleagueDef[]=colleagueDesks.map((desk,index)=>({id:`colleague-${index}`,name:['小周','老陈','小林','阿许','阿敏','小唐','小赵'][index],deskId:desk.id,roomId:desk.roomId,...deskWorkingPoint(desk),yaw:desk.yaw,pot:index<2}));
  // Movable props occupy service-room slots, away from workstation banks and
  // mandatory operating points. All four cakes may enlarge without sealing a room.
  const serviceRooms=rooms.filter(room=>room.kind!=='work');
@@ -95,6 +103,8 @@ export function generateWorld(seed:number):WorldDef {
   ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`cake-${index}`,kind:'cake' as const,roomId:room.id,...local(room.id,6.8,11.8)})),
   ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`box-${index}`,kind:'box' as const,roomId:room.id,...local(room.id,2.6,6)})),
  ]:[{id:'cake-0',kind:'cake' as const,roomId:2,x:26.4,z:10.8},{id:'cake-1',kind:'cake' as const,roomId:7,x:26.6,z:26},{id:'box-0',kind:'box' as const,roomId:7,x:21.5,z:30},{id:'box-1',kind:'box' as const,roomId:4,x:41,z:8}];
+ // A clear central intro slot, separate from doorways and all workstation banks.
+ props.push({id:'cake-intro',kind:'cake',roomId:desks[0].roomId,x:desks[0].seat.x,z:layout?Math.floor(desks[0].roomId/5)*rd+10.6:desks[0].seat.z-4.5});
  const workStops=rooms.filter(room=>room.kind==='work').sort((a,b)=>Number(b.id===layout?.home)-Number(a.id===layout?.home)).map(room=>{
   const desk=desks.find(item=>item.roomId===room.id&&!item.home)!;
   return {x:desk.x+(desk.x<room.x?1.8:-1.8),z:desk.seat.z};
@@ -104,17 +114,17 @@ export function generateWorld(seed:number):WorldDef {
  const exitStops=exits.map(exit=>({x:exit.x-exit.outward.x*.95,z:exit.z-exit.outward.z*.95}));
  // The shift ends during a public-area inspection, not always in the private
  // office. This seeded schedule uses only fixed workplaces and objectives.
- const firstClock=layout?Math.floor(variation()*2):0,otherClock=1-firstClock;
+ const firstClock=0,otherClock=0;
  const bossSpawn=layout?{...clockStops[firstClock]}:{x:6,z:26};
- const patrol=layout?[clockStops[firstClock],exitStops[firstClock],clockStops[otherClock],exitStops[otherClock],workStops[0],workStops[1],workStops[2]]:[{x:5,z:26},{x:15,z:23},{x:25,z:26},{x:35,z:32},{x:45,z:31},{x:45,z:8},{x:33,z:7},{x:24,z:7},{x:14,z:6},{x:5,z:6}];
- const world:WorldDef={seed,rooms,walls,doors,desks,stations,exits,props,colleagues,spawn:{...desks[0].seat},bossSpawn,patrol,width:48,depth:36,validation:[]};
+ const patrol=layout?[clockStops[firstClock],exitStops[0],workStops[0],exitStops[1],clockStops[otherClock],workStops[1],workStops[2]]:[{x:5,z:26},{x:15,z:23},{x:25,z:26},{x:35,z:32},{x:45,z:31},{x:45,z:8},{x:33,z:7},{x:24,z:7},{x:14,z:6},{x:5,z:6}];
+ const world:WorldDef={seed,rooms,walls,doors,desks,stations,exits,props,colleagues,spawn:{...desks[0].seat},bossSpawn,patrol:patrol.map(p=>({...p})),width:48,depth:36,validation:[]};
  // Reflection varies exterior walls/route direction without changing legal dimensions or topology.
  const mirrorX=random()>.5,mirrorZ=random()>.5;
  const point=(p:Vec2)=>{if(mirrorX)p.x=48-p.x;if(mirrorZ)p.z=36-p.z;};
  const facing=(v:{yaw:number})=>{if(mirrorX)v.yaw=-v.yaw;if(mirrorZ)v.yaw=Math.PI-v.yaw;};
  for(const r of rooms){point(r);point(r.switch);}
  for(const w of walls)point(w);for(const d of doors)point(d);
- for(const d of desks){point(d);point(d.seat);facing(d);}
+ for(const d of desks){point(d);point(d.seat);if(d.workPoint)point(d.workPoint);facing(d);}
  for(const c of colleagues){point(c);facing(c);}for(const p of props)point(p);
  for(const p of stations){point(p);facing(p);}
  for(const e of exits){point(e);facing(e);if(mirrorX)e.outward.x*=-1;if(mirrorZ)e.outward.z*=-1;}

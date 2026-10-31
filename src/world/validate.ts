@@ -37,7 +37,7 @@ export function validateWorld(world:WorldDef,state:GameState,query:WorldQuery=ma
  const home=world.desks.find(desk=>desk.home);
  if(spawnRoom===undefined)failures.push('出生点不在房间内');
  if(world.desks.filter(desk=>desk.home).length!==1)failures.push('本人座位必须恰好一个');
- if(world.stations.length!==2||new Set(world.stations.map(station=>station.roomId)).size!==2)failures.push('必须有两台分处不同房间的打卡机');
+ if(world.stations.length!==1)failures.push('必须恰有一台全局打卡机');
  if(world.exits.length!==2)failures.push('必须有两个出口');
  const distance=(a:Vec2,b:Vec2)=>{const path=query.path(a,b,state);return path.length?pathLength(a,path):Infinity;};
  const spawnClockDistances=world.stations.map(station=>distance(world.spawn,station));

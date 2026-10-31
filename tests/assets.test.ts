@@ -44,8 +44,8 @@ it('reports actual unique completions for a preload batch',async()=>{
  const complete=assets.preload([{id:'a',url:'/a'},{id:'b',url:'/b'},{id:'a',url:'/a'}],progress);
  expect(progress).toHaveBeenCalledWith({completed:0,total:2});
  second.resolve(fixture());await assets.load('b','/b');await Promise.resolve();
- expect(progress).toHaveBeenLastCalledWith({completed:1,total:2,id:'b'});
- first.resolve(fixture());await complete;expect(progress).toHaveBeenLastCalledWith({completed:2,total:2,id:'a'});
+ expect(progress).toHaveBeenLastCalledWith({completed:1,total:2,id:'b',failed:[]});
+ first.resolve(fixture());await complete;expect(progress).toHaveBeenLastCalledWith({completed:2,total:2,id:'a',failed:[]});
  expect(loader).toHaveBeenCalledTimes(2);assets.dispose();
 });
 

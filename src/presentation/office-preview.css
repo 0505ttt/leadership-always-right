@@ -1,0 +1,8 @@
+@import url('./character-preview.css');
+
+.office-preview .asset-gallery__stage { min-height: 560px; }
+.office-preview__badge { color: #aeb8a4; font: 12px/1.6 ui-monospace, monospace; }
+.office-preview__reading { padding: 15px 0; border-bottom: 1px solid #ffffff18; }
+.office-preview__reading dt { color: #aeb8a4; font-size: 12px; margin-bottom: 5px; }
+.office-preview__reading dd { margin: 0; color: #e4e6d5; font: 14px/1.65 ui-monospace, monospace; }
+.office-preview__notice { color: #c4cbb8; font-size: 12px; line-height: 1.85; }

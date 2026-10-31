@@ -3,7 +3,7 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 export interface RuntimeAssetSpec {readonly id:string;readonly url:string}
-export interface RuntimeAssetProgress {completed:number;total:number;id?:string}
+export interface RuntimeAssetProgress {completed:number;total:number;id?:string;phase?:'download'|'parse';failed?:{id:string;message:string}[]}
 export type RuntimeAssetLoader=(url:string)=>Promise<GLTF>;
 interface Entry {url:string;promise:Promise<GLTF>;asset?:GLTF}
 
@@ -13,14 +13,22 @@ export class RuntimeAssets {
  private instances=new Set<Object3D>();
  private disposedResources=new WeakSet<object>();
  private disposed=false;
- constructor(private readonly loader:RuntimeAssetLoader=(url)=>new GLTFLoader().loadAsync(url)){}
+ constructor(private readonly loader?:RuntimeAssetLoader){}
 
- load(id:string,url:string):Promise<GLTF>{
+ load(id:string,url:string,onStage?:(phase:'download'|'parse')=>void):Promise<GLTF>{
   if(this.disposed)return Promise.reject(new Error('Runtime assets are disposed'));
   const cached=this.entries.get(id);
   if(cached)return cached.url===url?cached.promise:Promise.reject(new Error(`Asset ${id} already uses a different URL`));
   let entry:Entry;
-  const promise=Promise.resolve().then(()=>{if(this.disposed)throw new Error('Runtime assets are disposed');return this.loader(url);}).then(asset=>{
+  const promise=Promise.resolve().then(async()=>{
+   if(this.disposed)throw new Error('Runtime assets are disposed');
+   if(this.loader)return this.loader(url);
+   onStage?.('download');
+   const response=await fetch(url);if(!response.ok)throw new Error(`${id}: HTTP ${response.status}`);
+   const data=await response.arrayBuffer();if(this.disposed)throw new Error('Runtime assets are disposed');
+   onStage?.('parse');
+   return new GLTFLoader().parseAsync(data,new URL('.',new URL(url,location.href)).href);
+  }).then(asset=>{
    if(this.disposed){this.disposeAsset(asset);throw new Error('Runtime assets are disposed');}
    entry.asset=asset;return asset;
   }).catch((error:unknown)=>{if(this.entries.get(id)===entry)this.entries.delete(id);throw error;});
@@ -31,7 +39,12 @@ export class RuntimeAssets {
   const unique=new Map<string,RuntimeAssetSpec>();
   for(const spec of specs){const previous=unique.get(spec.id);if(previous&&previous.url!==spec.url)throw new Error(`Asset ${spec.id} has conflicting URLs`);unique.set(spec.id,spec);}
   let completed=0;const total=unique.size;onProgress?.({completed,total});
-  await Promise.all([...unique.values()].map(async spec=>{await this.load(spec.id,spec.url);onProgress?.({completed:++completed,total,id:spec.id});}));
+  const failures:{id:string;message:string}[]=[];
+  await Promise.all([...unique.values()].map(async spec=>{
+   try{await this.load(spec.id,spec.url,phase=>onProgress?.({completed,total,id:spec.id,phase,failed:[...failures]}));onProgress?.({completed:++completed,total,id:spec.id,failed:[...failures]});}
+   catch(error){failures.push({id:spec.id,message:error instanceof Error?error.message:String(error)});onProgress?.({completed,total,id:spec.id,failed:[...failures]});}
+  }));
+  if(failures.length)throw new Error(failures.map(item=>`${item.id}: ${item.message}`).join('\n'));
  }
 
  instantiate(id:string):Object3D{

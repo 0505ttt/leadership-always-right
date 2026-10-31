@@ -6,6 +6,8 @@ import { createGame } from '../src/rules/game';
 import { RuntimeAssets } from '../src/gameplay/assets';
 import { makeWorldQuery } from '../src/world/query';
 import { validateWorld } from '../src/world/validate';
+import { physicalBounds } from '../src/gameplay/physical-bounds';
+import { deskWorkingPoint } from '../src/world/workstations';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { CharacterLibrary, CharacterVisual } from '../src/presentation/characters';
 
@@ -32,7 +34,7 @@ let scenes: OfficeScene[] = [];
 beforeEach(() => {
  harness.pending = []; vi.clearAllMocks(); scenes = [];
  vi.stubGlobal('window', { innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1 });
- vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, fillText() {}, strokeRect() {} }) }) });
+ vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, fillText() {}, strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, bezierCurveTo() {}, stroke() {} }) }) });
  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect = harness.disconnect; });
 });
 afterEach(() => { for (const scene of scenes) scene.dispose(); vi.unstubAllGlobals(); });
@@ -167,7 +169,7 @@ it('shows one chair per occupied seat and keeps the original home seat empty whi
  render();for(const colleague of state.colleagues)expect(chairs.get(colleague.deskId)!.visible).toBe(false);
  const home=world.desks.find(desk=>desk.home)!,other=world.desks.find(desk=>!desk.home&&!state.colleagues.some(colleague=>colleague.deskId===desk.id))!;
  expect(chairs.get(home.id)!.visible).toBe(false);
- Object.assign(state.player,other.seat,{pose:'working'});render();
+ Object.assign(state.player,deskWorkingPoint(other),{pose:'working',workstationId:other.id});render();
  expect(chairs.get(home.id)!.visible).toBe(true);expect(chairs.get(other.id)!.visible).toBe(false);
  Object.assign(state.player,{pose:'standing'});render();expect(chairs.get(other.id)!.visible).toBe(true);
  Object.assign(state.player,{pose:'rolling',sticky:true});render();expect(chairs.get(home.id)!.visible).toBe(false);
@@ -176,9 +178,10 @@ it('shows one chair per occupied seat and keeps the original home seat empty whi
 it('uses the Kimi environment and props once, with all rule visuals driven by the same state',()=>{
  const world=generateWorld(618),state=createGame(world),scene=loadedScene();
  const group=scene.scene.children.find(child=>child instanceof THREE.Group)!;
- expect(group.children).toHaveLength(world.colleagues.length+4);
+ expect(group.children).toHaveLength(world.colleagues.length+5);
  expect(group.children.filter(child=>child.name==='office-environment')).toHaveLength(1);
  expect(group.children.filter(child=>child.name==='office-props')).toHaveLength(1);
+ expect(group.children.filter(child=>child.name==='room-decorations')).toHaveLength(1);
  const environment=group.getObjectByName('office-environment')!;
  expect(world.walls.every(wall=>environment.getObjectByName(`world-wall:${wall.id}`))).toBe(true);
  expect(world.desks.every(desk=>environment.getObjectByName(`desk-clutter:${desk.id}`))).toBe(true);
@@ -196,8 +199,8 @@ it('uses the Kimi environment and props once, with all rule visuals driven by th
  expect(diagnostics.decorationColliders.length).toBeGreaterThan(0);
  expect(scene.getDecorationColliders()).toEqual(diagnostics.decorationColliders);
  for(const collider of diagnostics.decorationColliders){
-  const fixture=environment.getObjectByName(collider.id);expect(fixture,collider.id).toBeDefined();
-  const bounds=new THREE.Box3().setFromObject(fixture!);
+  const fixture=group.getObjectByName(collider.id);expect(fixture,collider.id).toBeDefined();
+  const bounds=physicalBounds(fixture!);
   expect(collider.height).toBeCloseTo(bounds.max.y);
   expect(collider.w).toBeCloseTo(bounds.max.x-bounds.min.x);
   expect(collider.d).toBeCloseTo(bounds.max.z-bounds.min.z);
@@ -236,7 +239,9 @@ it('returns detached character diagnostics without exposing mutable pose calibra
  const contact={seatY:.5,seatProbeZ:0,backrestFrontZ:-.2,backrestProbeY:.8};
  const make=()=>{
   const root=new THREE.Group(),hand=new THREE.Object3D(),back=new THREE.Object3D(),crown=new THREE.Object3D();root.add(hand,back,crown);
-  return {root,assetId:'employee-base-v1',anchors:{hand,back,crown},update(){},measure:()=>({}),getDiagnostics:()=>({chairContact:contact}),dispose:()=>root.removeFromParent()} as unknown as CharacterVisual;
+  const bones={LeftFoot:new THREE.Bone(),RightFoot:new THREE.Bone(),LeftHand:new THREE.Bone(),RightHand:new THREE.Bone()};
+  const chair=new THREE.Group();root.add(chair,...Object.values(bones));
+  return {root,bones,chair,assetId:'employee-base-v1',anchors:{hand,back,crown},update(){},measure:()=>({}),getDiagnostics:()=>({chairContact:contact}),dispose:()=>root.removeFromParent()} as unknown as CharacterVisual;
  };
  const library:CharacterLibrary={prepare:async()=>{},createEmployee:make,createLeader:make,createColleague:make,dispose(){}};
  const scene=loadedScene(),world=generateWorld(618);scene.useCharacterLibrary(library);scene.load(world);

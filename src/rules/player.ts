@@ -1,6 +1,7 @@
 import type { GameState, InputFrame, Interaction, Vec2, WorldDef, WorldQuery } from '../contracts/game';
-import { announceMessage, clamp, copyPoint, distance, explicitAction, flowFactor, forward, logEvent, playerHeight, runtimeFor } from './runtime';
+import { announceMessage, clamp, copyPoint, distance, explicitAction, flowFactor, forward, leaveWorkstation, logEvent, playerHeight, runtimeFor, setWorkingStance } from './runtime';
 import { dropHeld } from './objects';
+import { deskWorkingPoint } from '../world/workstations';
 
 export function litAt(state: GameState, point: Vec2, query: WorldQuery): boolean {
   const room = query.roomAt(point);
@@ -27,11 +28,15 @@ export function updatePlayer(state: GameState, input: InputFrame, dt: number, wo
   player.moving=false;player.sprinting=false;
   player.protection=Math.max(0,player.protection-dt);
   if(player.pose==='dragged')return;
-  player.yaw=input.yaw;
+  if(player.pose!=='working')player.yaw=input.yaw;
   state.aiming=input.aim;
   const room=query.roomAt(player);
   state.roomId=room?.id??state.roomId;
   state.dark=!litAt(state,player,query);
+  if(player.pose==='working') {
+    const deskId=player.workstationId??runtime.workingDesk;
+    if(deskId)setWorkingStance(state,deskId);
+  }
   const overhead=clearance(state,query);
   const previousY=player.y;
   const support=query.supportHeight(player,state);
@@ -50,7 +55,7 @@ export function updatePlayer(state: GameState, input: InputFrame, dt: number, wo
     if(player.sticky)announceMessage(state,'连人带椅，不能跳。主通道都可以滑过去。');
     else if(player.pose==='standing'&&grounded&&overhead>2.5)player.vy=Math.sqrt(2*12*.65);
   }
-  if(!grounded||player.vy>0) {
+  if(player.pose!=='working'&&(!grounded||player.vy>0)) {
     player.vy-=12*dt;
     player.y=Math.max(0,player.y+player.vy*dt);
     if(player.y<=0)player.vy=0;
@@ -59,11 +64,11 @@ export function updatePlayer(state: GameState, input: InputFrame, dt: number, wo
   const length=Math.hypot(localX,localZ);
   if(length>1){localX/=length;localZ/=length;}
   if(player.pose==='working'&&player.sticky&&length>.05) {
-    player.pose='rolling';runtimeFor(state).workingDesk=null;
+    player.pose='rolling';leaveWorkstation(state);
   }
   if(player.pose==='working'||length<.01) {
     player.stamina=Math.min(4,player.stamina+dt*.5);
-    updateLanding(state,query,previousY);
+    if(player.pose!=='working')updateLanding(state,query,previousY);
     return;
   }
   const direction={x:-localX*Math.cos(input.yaw)+localZ*Math.sin(input.yaw),z:localX*Math.sin(input.yaw)+localZ*Math.cos(input.yaw)};
@@ -97,7 +102,8 @@ function candidates(state: GameState, world: WorldDef): Candidate[] {
   for(const desk of world.desks) {
     if(state.colleagues.some(c=>c.deskId===desk.id))continue;
     const raised=(state.deskHeights[desk.id]??.75)>.85;
-    result.push({id:desk.id,kind:'sit',label:raised?'电脑被抬高，暂时无法装忙':player.sticky?'E 靠近电脑装忙 · 仍粘在椅子上':'E 坐下装忙',duration:0,progress:0,point:desk.seat,roomId:desk.roomId,priority:2});
+    const label=raised?(player.sticky?'E 滚回工位装忙 · 粘椅也算遵守': 'E 站上椅子办公'):player.sticky?'E 靠近电脑装忙 · 仍粘在椅子上':'E 坐下装忙';
+    result.push({id:desk.id,kind:'sit',label:label+(desk.home?' · 本人工位':''),duration:0,progress:0,point:desk.seat,roomId:desk.roomId,priority:2});
   }
   return result;
 }
@@ -134,16 +140,21 @@ export function updateInteraction(state:GameState,input:InputFrame,dt:number,wor
   if(runtime.interactionLatched)return;
   if(current.kind==='stand') {
     if(input.interactPressed) {
-      player.pose=player.sticky?'rolling':'standing';runtime.workingDesk=null;
+      player.pose=player.sticky?'rolling':'standing';leaveWorkstation(state);
       runtime.interactionLatched=true;logEvent(state,'player:left-desk');
     }
     return;
   }
   if(current.kind==='sit') {
     if(!input.interactPressed)return;
-    if((state.deskHeights[current.id]??.75)>.85){announceMessage(state,'提高优先级：先换个工位，或等桌子降下来。');return;}
-    player.x=current.point.x;player.z=current.point.z;player.y=0;player.vy=0;player.pose='working';
-    runtime.workingDesk=current.id;runtime.interactionLatched=true;cancelInteraction(state);
+    const desk=world.desks.find(item=>item.id===current.id)!;
+    const workingPoint=deskWorkingPoint(desk);
+    const elevated=!player.sticky&&(state.deskHeights[current.id]??.75)>.85;
+    if(elevated&&query.clearance(workingPoint,state)<2.35) {announceMessage(state,'这张椅子上方净空不足，先等压力顶板复位。');return;}
+    const docked=query.move(player,{x:workingPoint.x-player.x,z:workingPoint.z-player.z},.3,playerHeight(state),state,player.y);
+    if(distance(docked,workingPoint)>.01){announceMessage(state,'椅位前面被挡住了，换个方向靠近。');return;}
+    player.x=workingPoint.x;player.z=workingPoint.z;player.yaw=desk.yaw;player.pose='working';
+    setWorkingStance(state,current.id);runtime.interactionLatched=true;cancelInteraction(state);
     logEvent(state,`player:working:${current.id}`);return;
   }
   if(current.kind==='prop') {
@@ -174,7 +185,7 @@ export function updateInteraction(state:GameState,input:InputFrame,dt:number,wor
   if(player.moving||Math.hypot(input.moveX,input.moveZ)>.05){cancelInteraction(state);return;}
   if(current.kind==='clock'&&state.clocked)return;
   if(current.kind==='exit'&&state.openedExits.includes(current.id))return;
-  if(current.kind==='exit'&&!state.clocked){announceMessage(state,'下班要先打卡。工牌在身上，找任意一台打卡机。');return;}
+  if(current.kind==='exit'&&!state.clocked){announceMessage(state,'下班要先打卡。工牌在身上，找到打卡机。');return;}
   if(current.kind==='light'&&(state.switchCooldown[current.roomId!]??0)>0)return;
   if(runtime.interactionId!==current.id) {
     runtime.interactionId=current.id;runtime.interactionElapsed=0;
