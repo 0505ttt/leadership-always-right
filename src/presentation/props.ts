@@ -218,6 +218,16 @@ function cakeVisual(pool: VisualResourcePool, model?: THREE.Object3D): THREE.Gro
   return group;
 }
 
+function bedVisual(pool: VisualResourcePool): THREE.Group {
+  const group = new THREE.Group(), m = materials(pool);
+  for (const x of [-.82, .82]) for (const z of [-.45, .45]) addBox(group, pool, m.graphite, [.1, .12, .1], [x, .06, z]);
+  addBox(group, pool, m.graphite, [2.05, .18, 1.25], [0, .18, 0]);
+  addBox(group, pool, m.paper, [1.92, .22, 1.14], [0, .36, 0]);
+  addBox(group, pool, m.graphite, [.07, .48, 1.25], [-1, .34, 0]);
+  addBox(group, pool, m.paper, [.52, .12, .8], [-.65, .52, 0]);
+  return group;
+}
+
 function boxVisual(pool: VisualResourcePool): THREE.Group {
   const m = materials(pool);
   const group = new THREE.Group();
@@ -264,7 +274,7 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
     chairs.set(desk.id, chair);
   }
   for (const prop of world.props) {
-    const object = prop.kind === 'cake' ? cakeVisual(pool, options.models?.('cake-v2')) : options.models?.('box-v1')??boxVisual(pool);
+    const object = prop.kind === 'bed' ? bedVisual(pool) : prop.kind === 'cake' ? cakeVisual(pool, options.models?.('cake-v2')) : options.models?.('box-v1')??boxVisual(pool);
     object.name = `world-prop:${prop.id}`;
     if (prop.kind === 'cake') object.scale.y = DIMENSIONS.cakeHeight / .4;
     object.position.set(prop.x, 0, prop.z);
@@ -326,7 +336,7 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
             visual.position.y += .12;
           }
         } else visual.position.set(prop.x, prop.y ?? 0, prop.z);
-        visual.visible = !prop.held || !playerOccluded;
+        visual.visible = !prop.dormant && (!prop.held || !playerOccluded);
       }
 
       for (const pot of state.pots) {

@@ -5,6 +5,7 @@ import { litAt } from './player';
 import { visible } from './boss';
 import { beginInspection, cancelInspection } from './inspection';
 import { safePropPlacement } from './prop-safety';
+import { activateBed, findBedPlacement, updateBed } from './bed';
 
 const definitions:Record<Exclude<RuleKind,'return'>,{quote:string;effect:string;duration:number}>={
   cake:{quote:'把饼画大一点，大家才有奔头。',effect:'目标饼膨胀 · 挡双方视线 · 按E推行',duration:22},
@@ -13,6 +14,7 @@ const definitions:Record<Exclude<RuleKind,'return'>,{quote:string;effect:string;
   flow:{quote:'这个流程，你给我再走一遍。',effect:'标记通道逆向阻力 · 顺箭头不减速',duration:16},
   transparent:{quote:'有问题，就透明一点。',effect:'局部隔断透明 · 碰撞仍保留',duration:18},
   pressure:{quote:'这点压力，低头扛住。',effect:'活动顶板降到1.6米 · 椅子可直接滑过',duration:14},
+  bed:{quote:'公司就是你家，还回什么家。',effect:'预告落床 · 保护人员、工位与必经通路 · 无安全落点取消',duration:16},
 };
 
 const spatial=(rule:ActiveRule):boolean=>rule.kind!=='return'&&rule.kind!=='pot';
@@ -43,6 +45,7 @@ function targetLabel(state:GameState,world:WorldDef,kind:RuleKind,targetId:strin
   else if(kind==='flow')object='中央通道';
   else if(kind==='transparent')object='局部隔断';
   else if(kind==='pressure')object='活动顶板';
+  else if(kind==='bed')object='家用床';
   return `${room} · ${object}`;
 }
 
@@ -72,7 +75,7 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
     if(query.lineOfSight(state.player,entry,playerSightHeight(state),state))localRooms.add(room.id);
   }
   const observable=(point:Vec2,roomId:number)=>localRooms.has(roomId)&&distance(state.player,point)<=12&&query.lineOfSight(state.player,point,playerSightHeight(state),state);
-  const kinds:Exclude<RuleKind,'return'>[]=['cake','desk','pot','flow','transparent','pressure'];
+  const kinds:Exclude<RuleKind,'return'>[]=['cake','desk','pot','flow','transparent','pressure','bed'];
   for(let index=kinds.length-1;index>0;index--){const swap=Math.floor(runtime.random()*(index+1));[kinds[index],kinds[swap]]=[kinds[swap],kinds[index]];}
   const intro=state.props.find(prop=>prop.id==='cake-intro');
   if(intro&&runtime.lastEnvironment<0) {
@@ -129,6 +132,13 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
         &&(knownRooms.has(wall.roomId)||(distance(boss,wall)<=10&&query.lineOfSight(boss,wallFace(wall,boss),1.3,state))));
       const target=choose(targets,target=>target.roomId,target=>observable(wallFace(target,state.player),target.roomId));
       if(!target)continue;targetId=target.id;roomId=target.roomId;
+    } else if(kind==='bed') {
+      const targets=state.props.filter(prop=>prop.kind==='bed'&&prop.dormant&&!occupied.has(prop.roomId)&&!state.pressureRooms.includes(prop.roomId));
+      const target=choose(targets,prop=>prop.roomId);
+      // A bed has no observable local target. Try the permitted remote command
+      // instead of skipping that fallback and making the rule unreachable.
+      if(!target||!findBedPlacement(state,world,query,target)){if(localOnly)break;continue;}
+      targetId=target.id;roomId=target.roomId;
     } else {
       const homeRoom=world.desks.find(desk=>desk.home)?.roomId;
       const targets=world.rooms.filter(room=>room.pressure&&room.id!==homeRoom&&!occupied.has(room.id)&&knownRooms.has(room.id)
@@ -149,8 +159,9 @@ function selectRule(state:GameState,world:WorldDef,query:WorldQuery):ActiveRule|
 }
 
 function cancelRule(state:GameState,rule:ActiveRule,reason:string):void {
+  if(rule.kind==='bed'){const bed=state.props.find(prop=>prop.id===rule.targetId);if(bed){bed.dormant=true;bed.y=2.8;}}
   state.rules=state.rules.filter(item=>item!==rule);
-  runtimeFor(state).rules.delete(rule.id);
+  const runtime=runtimeFor(state);runtime.nextEnvironment=state.elapsed+3;runtime.rules.delete(rule.id);
   cancelInspection(state,rule.id);
   announceMessage(state,reason,3);logEvent(state,`rule:${rule.kind}:cancelled`);
 }
@@ -167,6 +178,7 @@ function activate(state:GameState,rule:ActiveRule,world:WorldDef,query:WorldQuer
     logEvent(state,'boss:chase-started');return;
   }
   if(rule.kind==='cake'&&!safeCake(state,rule.targetId,world,query)){cancelRule(state,rule,'饼没有安全膨胀空间，或已被拿走。这次画饼作废。');return;}
+  if(rule.kind==='bed'){const bed=state.props.find(prop=>prop.id===rule.targetId);if(!bed||!activateBed(state,world,query,bed)){cancelRule(state,rule,'床没有安全落点，这次落床取消。');return;}}
   if(rule.kind==='pot') {
     const pot=state.pots.find(item=>item.id===metadata?.potId),target=actor(state,rule.targetId),source=pot&&actor(state,pot.owner);
     if(!pot||!target||!source||pot.owner!==metadata?.sourceOwner||pot.phase!=='attached'||pot.cooldown>0||state.pots.some(item=>item.owner===rule.targetId)
@@ -228,6 +240,7 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
       continue;
     }
     if(rule.kind==='return')continue;
+    if(rule.kind==='bed'&&!updateBed(state,rule,world,query)){cancelRule(state,rule,'落点被占用，床已安全撤回；不会挤住玩家。');continue;}
     if(rule.phase==='active') {
       if(rule.kind==='pressure') {
         // Geometry, actors, camera and presentation all consume this same moving ceiling.
@@ -254,6 +267,7 @@ export function updateEnvironment(state:GameState,dt:number,world:WorldDef,query
         const prop=state.props.find(item=>item.id===rule.targetId);
         if(prop){prop.scale=Math.max(1,prop.scale-2*dt/.8);prop.large=prop.scale>1.05;complete=prop.scale<=1;}
       } else if(rule.kind==='desk')complete=restoreDesk(state,rule,dt,world);
+      else if(rule.kind==='bed')complete=rule.age>=.8;
       else if(rule.kind==='transparent')state.transparentWalls=state.transparentWalls.filter(id=>id!==rule.targetId);
       else if(rule.kind==='flow')state.flowRooms=state.flowRooms.filter(id=>id!==rule.roomId);
       else if(rule.kind==='pressure'){

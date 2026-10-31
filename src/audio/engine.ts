@@ -26,7 +26,7 @@ const VOICE_LINES: Record<VoiceLineId, readonly string[]> = {
 const VOICE_COOLDOWNS: Record<VoiceLineId | 'rule', number> = { inspect: 18, 'empty-desk': 12, search: 14, caught: 15, report: 20, escape: 30, release: 25, complaint: 38, rule: 3 };
 const RULE_CUES: Record<string, [SoundCue, SoundCue]> = {
   cake: ['cake-inflate', 'cake-restore'], desk: ['desk-rise', 'desk-restore'], pot: ['pot-land', 'pot-return'],
-  return: ['chair-stick', 'chair-release'], flow: ['flow-start', 'flow-stop'], transparent: ['wall-transparent', 'wall-solid'], pressure: ['pressure-lower', 'pressure-restore'],
+  return: ['chair-stick', 'chair-release'], flow: ['flow-start', 'flow-stop'], transparent: ['wall-transparent', 'wall-solid'], pressure: ['pressure-lower', 'pressure-restore'], bed: ['pressure-lower', 'pressure-restore'],
 };
 const finite = (n: number) => Number.isFinite(n);
 const clamp = (n: number, fallback = 0) => finite(n) ? Math.max(0, Math.min(1, n)) : fallback;

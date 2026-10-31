@@ -25,16 +25,18 @@ export function makeWorldQuery(world:WorldDef):WorldQuery {
  let navigationCache:{width:number;depth:number;rects:Rect[];cells:Int8Array}|undefined;
  const roomAt=(p:Vec2)=>{const r=world.rooms.find(r=>inside(p,r,.01));if(!r)return undefined;return [...world.stations,...world.exits].some(s=>s.roomId===r.id&&distance(s,p)<=2.25)?{...r,permanentLight:true}:r;};
  function solids(height:number,state:GameState,vision=false,feet=0,ignoreTransparent=vision):Rect[]{
-  const rows:Rect[]=world.walls.filter(w=>w.height>feet&&!(w.crawl&&height+feet<=.95)&&!(ignoreTransparent&&state.transparentWalls.includes(w.id)));
+  const rows:Rect[]=world.walls.filter(w=>(vision?height<w.height:w.height>feet)&&!(w.crawl&&height+feet<=.95)&&!(ignoreTransparent&&state.transparentWalls.includes(w.id)));
   // Read the optional visual solids on every query: asset assembly can register them after query creation.
   for(const decoration of world.decorationColliders??[])if((vision?height:feet)<decoration.height)rows.push(decoration);
   for(const e of world.exits)if(!state.openedExits.includes(e.id)) rows.push({x:e.x+e.outward.x*.65,z:e.z+e.outward.z*.65,w:e.outward.x? .2:2.4,d:e.outward.z?.2:2.4});
   for(const d of world.desks){const h=state.deskHeights[d.id]??.75;if(vision?height>=h-.12&&height<=h:height+feet>h-.12&&feet<h)rows.push({x:d.x,z:d.z,w:1.6,d:.85});}
-  for(const p of state.props){if(p.held||(p.y??0)>.15)continue;const size=p.kind==='box'?.55:.6*p.scale;
+  for(const p of state.props){if(p.held||p.dormant||(p.y??0)>.15)continue;
+   const w=p.kind==='box'?.55:p.kind==='bed'?DIMENSIONS.bedWidth:.6*p.scale;
+   const d=p.kind==='box'?.55:p.kind==='bed'?DIMENSIONS.bedDepth:.6*p.scale;
    // Flatten the rendered pie and its physical support, not the established
    // rule-level sight mask that makes an enlarged pie a counterplay object.
-   const obstacleHeight=p.kind==='box'?(vision?.62:.55):(vision?.4:DIMENSIONS.cakeHeight)*p.scale;
-   if((vision?height:feet)<obstacleHeight)rows.push({x:p.x,z:p.z,w:size,d:size});}
+   const obstacleHeight=p.kind==='box'?(vision?.62:.55):p.kind==='bed'?DIMENSIONS.bedHeight:(vision?.4:DIMENSIONS.cakeHeight)*p.scale;
+   if((vision?height:feet)<obstacleHeight)rows.push({x:p.x,z:p.z,w,d});}
   return rows;
  }
  function free(p:Vec2,radius:number,height:number,state:GameState,feet=0){
@@ -49,7 +51,7 @@ export function makeWorldQuery(world:WorldDef):WorldQuery {
   move(p,delta,radius,height,state,feet=0){let out={x:p.x,z:p.z};const steps=Math.max(1,Math.ceil(Math.hypot(delta.x,delta.z)/.12));const dx=delta.x/steps,dz=delta.z/steps;for(let i=0;i<steps;i++){const both={x:out.x+dx,z:out.z+dz};if(free(both,radius,height,state,feet)){out=both;continue;}const x={x:out.x+dx,z:out.z};if(free(x,radius,height,state,feet))out=x;const z={x:out.x,z:out.z+dz};if(free(z,radius,height,state,feet))out=z;}return out;},
   lineOfSight(a,b,height,state,mode='vision'){return !solids(height,state,true,0,mode==='vision').some(r=>segmentRect(a,b,r));},
   validPlacement(p,radius,state){if(!free(p,radius,1.75,state))return false;if(distance(p,world.spawn)<1.5)return false;return ![...world.doors,...world.exits,...world.stations,...world.rooms.map(r=>r.switch)].some(d=>distance(p,d)<radius+1.6);},
-  supportHeight(p,state){const overlaps=(r:Rect)=>{const dx=Math.max(Math.abs(p.x-r.x)-r.w/2,0),dz=Math.max(Math.abs(p.z-r.z)-r.d/2,0);return dx*dx+dz*dz<.3*.3;};let y=0;for(const prop of state.props)if(!prop.held&&(prop.y??0)<.1&&overlaps({...prop,w:prop.kind==='box'?.55:.6*prop.scale,d:prop.kind==='box'?.55:.6*prop.scale}))y=Math.max(y,prop.kind==='box'?.55:DIMENSIONS.cakeHeight*prop.scale);for(const d of world.desks)if(overlaps({...d,w:1.6,d:.85}))y=Math.max(y,state.deskHeights[d.id]??.75);for(const decoration of world.decorationColliders??[])if(overlaps(decoration))y=Math.max(y,decoration.height);return y;},
+  supportHeight(p,state){const overlaps=(r:Rect)=>{const dx=Math.max(Math.abs(p.x-r.x)-r.w/2,0),dz=Math.max(Math.abs(p.z-r.z)-r.d/2,0);return dx*dx+dz*dz<.3*.3;};let y=0;for(const prop of state.props)if(!prop.held&&!prop.dormant&&(prop.y??0)<.1&&overlaps({...prop,w:prop.kind==='box'?.55:prop.kind==='bed'?DIMENSIONS.bedWidth:.6*prop.scale,d:prop.kind==='box'?.55:prop.kind==='bed'?DIMENSIONS.bedDepth:.6*prop.scale}))y=Math.max(y,prop.kind==='box'?.55:prop.kind==='bed'?DIMENSIONS.bedHeight:DIMENSIONS.cakeHeight*prop.scale);for(const d of world.desks)if(overlaps({...d,w:1.6,d:.85}))y=Math.max(y,state.deskHeights[d.id]??.75);for(const decoration of world.decorationColliders??[])if(overlaps(decoration))y=Math.max(y,decoration.height);return y;},
   clearance(p,state){let h=Infinity;for(const w of world.walls)if(w.crawl&&inside(p,w,.31))h=Math.min(h,.95);for(const d of world.desks)if(inside(p,{...d,w:1.6,d:.85},.3)&&((p as Vec2 & {y?:number}).y??0)<(state.deskHeights[d.id]??.75))h=Math.min(h,(state.deskHeights[d.id]??.75)-.1);const room=roomAt(p);if(room&&state.pressureRooms.includes(room.id))h=Math.min(h,state.pressureHeights[room.id]??1.6);return h;},
   path(a,b,state){
    // Keep the established occupancy grid for narrow routes. Only line-of-

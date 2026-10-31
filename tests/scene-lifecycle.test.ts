@@ -34,7 +34,7 @@ let scenes: OfficeScene[] = [];
 beforeEach(() => {
  harness.pending = []; vi.clearAllMocks(); scenes = [];
  vi.stubGlobal('window', { innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1 });
- vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, fillText() {}, strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, bezierCurveTo() {}, stroke() {} }) }) });
+ vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, fillText() {}, strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, bezierCurveTo() {}, stroke() {}, scale() {}, createRadialGradient: () => ({ addColorStop() {} }), getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }) }) }) });
  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect = harness.disconnect; });
 });
 afterEach(() => { for (const scene of scenes) scene.dispose(); vi.unstubAllGlobals(); });

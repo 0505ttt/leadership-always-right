@@ -23,6 +23,7 @@ import type { Page, Settings, UICommand, UIModel } from './contracts/game';
 
 declare const __BUILD_COMMIT__:string;
 const version=__BUILD_COMMIT__;
+const demoMode=new URLSearchParams(location.search).get('demo')==='1';
 const runtimeAssets=new RuntimeAssets();
 const characterLibrary=createCharacterLibrary({assets:runtimeAssets});
 const runtimeSpecs=runtimeAssetSpecs(import.meta.env.BASE_URL,version);
@@ -32,7 +33,7 @@ settings.effectsVolume=0;
 settings.voiceVolume=0;
 settings.musicVolume=Math.max(0,Math.min(.4,settings.musicVolume??.4));
 try{localStorage.setItem('leadership-settings',JSON.stringify(settings));}catch{/* Preferences are optional. */}
-let loadingSeed=freshSeed(),world=generateWorld(loadingSeed),state=createGame(world),query=makeWorldQuery(world),page:Page='loading';
+let loadingSeed=demoMode?42:freshSeed(),world=generateWorld(loadingSeed),state=createGame(world,demoMode?180:600),query=makeWorldQuery(world),page:Page='loading';
 let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home',lastPausedAt=-Infinity,visualAssetsReady=false;
 let scene:OfficeScene,input:GameInput,ui:{render:(m:UIModel)=>void;destroy:()=>void};
 const audio=createOfficeAudio({music:settings.musicVolume,effects:settings.effectsVolume,voice:settings.voiceVolume});
@@ -68,7 +69,7 @@ function enterHome(){
  void audio.resume();
  if(pendingDestination==='home'){page='home';input.setEnabled(false);show();}else startReadyGame();
 }
-function home(){audioObserver.reset();pausedFromComputer=false;if(!visualAssetsReady){void loadGame(world.seed,'home');return;}loadingToken++;pendingDestination='home';page='home';phone=false;input?.setEnabled(false);state=createGame(world);scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);show();}
+function home(){audioObserver.reset();pausedFromComputer=false;if(!visualAssetsReady){void loadGame(world.seed,'home');return;}loadingToken++;pendingDestination='home';page='home';phone=false;input?.setEnabled(false);state=createGame(world,demoMode?180:600);scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);show();}
 async function loadGame(seed:number,nextPage:'ready'|'home'='home'){
  const token=++loadingToken;loadingSeed=seed;pendingDestination=nextPage;visualAssetsReady=false;audioObserver.reset();closeComputer(state);pausedFromComputer=false;loadingProgress={stage:'download',completedResources:0,totalResources:runtimeSpecs.length,detail:'读取本局必需模型，已成功的资源会复用缓存'};page='loading';input.setEnabled(false);scene.clear();loadingStage='生成办公室与验证主路线';error='';show();await new Promise(resolve=>requestAnimationFrame(resolve));
  try{
@@ -83,7 +84,7 @@ async function loadGame(seed:number,nextPage:'ready'|'home'='home'){
   const seeds=Array.from({length:20},(_,attempt)=>(seed+attempt)>>>0);
   for(const candidate of seeds){
    if(token!==loadingToken)return;
-   world=generateWorld(candidate);state=createGame(world);query=makeWorldQuery(world);
+   world=generateWorld(candidate);state=createGame(world,demoMode?180:600);query=makeWorldQuery(world);
    if(!hasNormalOfficeDensity(world)||!validateWorld(world,state,query).valid)continue;
    scene.load(world);world.decorationColliders=scene.getDecorationColliders();query=makeWorldQuery(world);
    if(scene.getRuleVisuals().characters.some(actor=>actor.assetId==='technical-placeholder'))throw new Error('正式角色未接入，停止加载占位成品。');
@@ -144,7 +145,7 @@ function command(cmd:UICommand){
   }
   case 'resume':if(page==='settings'){page=settingsReturn;show();}else begin();break;
   case 'restart':void loadGame(state.seed);break;
-  case 'new-seed':void loadGame(freshSeed());break;
+  case 'new-seed':void loadGame(demoMode?42:freshSeed());break;
   case 'retry':void loadGame(loadingSeed,pendingDestination);break;
   case 'close-phone':phone=false;input.setPhoneOpen(false);show();break;
  }
@@ -163,6 +164,7 @@ async function boot(){
   // Locked production flow: real preload -> ready -> unified home -> immediate play.
   await import('../design/entry-experience/src/styles.css');await import('./entry-integration.css');
   entry=createEntryExperience(entryHost,{onStart:startReadyGame,onEnter:enterHome,onRetry:retryAsset,onSettingChange(key,value){command({type:'setting',key,value});}});
+  const demoNote=document.createElement('p');demoNote.className='demo-entry-note';demoNote.setAttribute('role','note');demoNote.textContent='三分钟实机演示 · 正常十房 · 03:00';demoNote.hidden=!demoMode;entryHost.append(demoNote);
   entryRoot.addEventListener('click',()=>{if(page==='ready'&&readyForEntry()&&entry?.getDiagnostics().phase==='home')enterHome();});
   entryHost.style.setProperty('--text-scale',String(settings.textScale));
   entryHost.querySelector<HTMLImageElement>('.stage-scene')!.src=`${import.meta.env.BASE_URL}assets/entry/entry-scene.webp`;

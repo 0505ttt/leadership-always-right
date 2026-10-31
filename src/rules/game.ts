@@ -8,15 +8,15 @@ import { deskWorkingPoint } from '../world/workstations';
 
 export { playerHeight } from './runtime';
 
-export function createGame(world:WorldDef):GameState {
+export function createGame(world:WorldDef,roundSeconds=600):GameState {
   const home=world.desks.find(desk=>desk.home);
   const holders=[...world.colleagues.filter(colleague=>colleague.pot),...world.colleagues.filter(colleague=>!colleague.pot)].slice(0,2);
   const state:GameState={
-    inspection:null,companySeconds:0,computer:null,seed:world.seed,elapsed:0,remaining:600,ending:null,clocked:false,openedExits:[],
+    inspection:null,companySeconds:0,computer:null,seed:world.seed,elapsed:0,roundSeconds,remaining:roundSeconds,ending:null,clocked:false,openedExits:[],
     player:{...(home?deskWorkingPoint(home):world.spawn),y:0,vy:0,yaw:home?.yaw??0,pose:'working',workstationId:home?.id??null,workStance:'seated',sticky:false,stamina:4,potId:null,holding:null,potInHand:false,protection:0,crouchIntent:false,moving:false,sprinting:false},
     boss:{...world.bossSpawn,yaw:0,mode:'patrol',lastSeen:null,evidenceUntil:0,evidenceId:null,seenFor:0,contactFor:0,searchFor:0,path:[],patrolIndex:0},
     pots:holders.map((holder,index)=>({id:`pot-${index}`,owner:holder.id,phase:'attached',cooldown:0,progress:0,from:{x:holder.x,z:holder.z},to:{x:holder.x,z:holder.z},targetId:null})),
-    props:world.props.map(prop=>({...prop,held:false,large:false,scale:1,y:0})),
+    props:world.props.map(prop=>({...prop,held:false,large:false,scale:1,y:0,dormant:prop.kind==='bed'})),
     colleagues:world.colleagues.map(colleague=>({...colleague,grudge:false,seenFor:0,reportAt:null,reportPosition:null,cooldown:0})),
     rules:[],lights:Object.fromEntries(world.rooms.map(room=>[room.id,room.lit||room.permanentLight])),switchCooldown:{},
     deskHeights:Object.fromEntries(world.desks.map(desk=>[desk.id,.75])),transparentWalls:[],pressureRooms:[],pressureHeights:{},flowRooms:[],interaction:null,
@@ -34,11 +34,11 @@ const complaints=['只要我还在动，就不算原地加班。','领导说得�
 /** Called only while the application is playing. Pausing stops this clock and every rule together. */
 export function stepGame(state:GameState,input:InputFrame,dt:number,world:WorldDef,query:WorldQuery):void {
   if(state.computer||state.ending||!Number.isFinite(dt)||dt<=0)return;
-  const timeLeft=Math.max(0,600-state.elapsed);
-  if(timeLeft===0){state.elapsed=600;state.remaining=0;state.ending='overtime';logEvent(state,'ending:overtime');return;}
+  const duration=state.roundSeconds,timeLeft=Math.max(0,duration-state.elapsed);
+  if(timeLeft===0){state.elapsed=duration;state.remaining=0;state.ending='overtime';logEvent(state,'ending:overtime');return;}
   // Bound both stalled-tab catch-up and the final partial frame to playable time.
   dt=Math.min(dt,.1,timeLeft);
-  state.elapsed=Math.min(600,state.elapsed+dt);state.remaining=Math.max(0,600-state.elapsed);
+  state.elapsed=Math.min(duration,state.elapsed+dt);state.remaining=Math.max(0,duration-state.elapsed);
   for(const id of Object.keys(state.switchCooldown))state.switchCooldown[Number(id)]=Math.max(0,state.switchCooldown[Number(id)]-dt);
   if(state.elapsed>=state.messageUntil)state.message='';
   if(state.elapsed>=state.bubbleUntil)state.bubble='';

@@ -17,6 +17,9 @@ export interface SignSpec {
 /** Scene-local construction kit. It owns no game state and shares no mutable materials with other modules. */
 export class RoomDecorationKit {
   readonly materials: Record<string, THREE.MeshStandardMaterial>;
+  readonly floorMaterial: THREE.MeshStandardMaterial;
+  readonly wallMaterial: THREE.MeshStandardMaterial;
+  readonly contactMaterial: THREE.MeshBasicMaterial;
 
   constructor(readonly pool: VisualResourcePool) {
     const wood = this.texture('old-walnut', '#a78962', (context, random) => {
@@ -60,26 +63,65 @@ export class RoomDecorationKit {
         context.fillRect(random() * 256, random() * 256, 1, 2);
       }
     });
+    const floorTexture = this.texture('commercial-floor', '#707a70', (context, random) => {
+      for (let line = 0; line <= 256; line += 64) {
+        context.strokeStyle = 'rgba(34,45,38,.12)'; context.lineWidth = 1;
+        context.beginPath(); context.moveTo(line, 0); context.lineTo(line, 256); context.stroke();
+        context.beginPath(); context.moveTo(0, line); context.lineTo(256, line); context.stroke();
+      }
+      for (let index = 0; index < 5200; index++) {
+        context.fillStyle = random() > .5 ? `rgba(225,226,205,${random() * .055})` : `rgba(35,47,39,${random() * .05})`;
+        const size = .4 + random() * 1.1;
+        context.fillRect(random() * 256, random() * 256, size, size);
+      }
+    }, 512);
+    const wallTexture = this.texture('painted-wall', '#879187', (context, random) => {
+      for (let index = 0; index < 6200; index++) {
+        context.fillStyle = random() > .48 ? `rgba(229,229,211,${random() * .045})` : `rgba(42,52,44,${random() * .04})`;
+        context.fillRect(random() * 256, random() * 256, .7, .7);
+      }
+      for (let index = 0; index < 26; index++) {
+        context.strokeStyle = `rgba(48,53,43,${.015 + random() * .035})`; context.lineWidth = .5 + random();
+        const x = random() * 256, y = 196 + random() * 60;
+        context.beginPath(); context.moveTo(x, y); context.lineTo(x + random() * 18, y + random() * 3); context.stroke();
+      }
+    }, 512);
+    const contactTexture = this.texture('contact-shadow', '#000000', context => {
+      const gradient = context.createRadialGradient(128, 128, 18, 128, 128, 126);
+      gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(.55, 'rgba(255,255,255,.48)'); gradient.addColorStop(1, '#000000');
+      context.fillStyle = gradient; context.fillRect(0, 0, 256, 256);
+    });
+    const woodData = this.dataTexture(wood), fabricData = this.dataTexture(fabric), corkData = this.dataTexture(cork), carpetData = this.dataTexture(carpet);
+    const floorData = this.dataTexture(floorTexture), wallData = this.dataTexture(wallTexture);
     wood.wrapS = wood.wrapT = fabric.wrapS = fabric.wrapT = cork.wrapS = cork.wrapT = carpet.wrapS = carpet.wrapT = THREE.RepeatWrapping;
     wood.repeat.set(2, 2); fabric.repeat.set(3, 3); cork.repeat.set(2, 2); carpet.repeat.set(4, 4);
     this.materials = {
-      paint: this.material('decor.paint.sage', { color: 0x879087, roughness: .83 }),
-      edge: this.material('decor.edge.pale', { color: 0xc4c8b9, roughness: .78 }),
+      paint: this.material('decor.paint.sage', { color: 0x879087, roughness: .86, bumpMap: corkData, bumpScale: .0015 }),
+      edge: this.material('decor.edge.pale', { color: 0xc4c8b9, roughness: .8, bumpMap: corkData, bumpScale: .001 }),
       dark: this.material('decor.dark.graphite', { color: 0x303b37, roughness: .69, metalness: .13 }),
       acrylic: this.material('decor.acrylic.company', { color: 0x24372f, roughness: .28, metalness: .2 }),
-      wood: this.material('decor.wood.walnut', { color: 0xffffff, map: wood, roughness: .7, metalness: .02 }),
+      wood: this.material('decor.wood.walnut', { color: 0xffffff, map: wood, roughnessMap: woodData, roughness: .82, bumpMap: woodData, bumpScale: .006, metalness: .02 }),
       brass: this.material('decor.metal.champagne', { color: 0xc6a065, roughness: .4, metalness: .64 }),
-      metal: this.material('decor.metal.powdercoat', { color: 0x77817a, roughness: .46, metalness: .58 }),
-      paper: this.material('decor.paper.ivory', { color: 0xe8e1ce, roughness: .97 }),
-      fabric: this.material('decor.fabric.sage', { color: 0xffffff, map: fabric, roughness: 1 }),
-      cork: this.material('decor.cork.pinboard', { color: 0xffffff, map: cork, roughness: 1 }),
-      carpet: this.material('decor.carpet.ribbed', { color: 0xffffff, map: carpet, roughness: 1 }),
-      whiteboard: this.material('decor.whiteboard.enamel', { color: 0xdde1d4, roughness: .25, metalness: .04 }),
+      metal: this.material('decor.metal.powdercoat', { color: 0x77817a, roughness: .62, metalness: .08, bumpMap: fabricData, bumpScale: .002 }),
+      paper: this.material('decor.paper.ivory', { color: 0xe8e1ce, roughness: .97, bumpMap: corkData, bumpScale: .0015 }),
+      fabric: this.material('decor.fabric.sage', { color: 0xffffff, map: fabric, roughnessMap: fabricData, roughness: .96, bumpMap: fabricData, bumpScale: .008 }),
+      cork: this.material('decor.cork.pinboard', { color: 0xffffff, map: cork, roughnessMap: corkData, roughness: .96, bumpMap: corkData, bumpScale: .01 }),
+      carpet: this.material('decor.carpet.ribbed', { color: 0xffffff, map: carpet, roughnessMap: carpetData, roughness: .98, bumpMap: carpetData, bumpScale: .012 }),
+      whiteboard: this.material('decor.whiteboard.enamel', { color: 0xdde1d4, roughness: .32, metalness: .04, bumpMap: corkData, bumpScale: .0005 }),
       red: this.material('decor.accent.oxide', { color: 0x9b5547, roughness: .8 }),
       green: this.material('decor.accent.green', { color: 0x476c5a, roughness: .82 }),
       yellow: this.material('decor.accent.note', { color: 0xd4bb70, roughness: .93 }),
       ceramic: this.material('decor.ceramic.warm', { color: 0xd9d5c5, roughness: .35 }),
     };
+    floorTexture.wrapS = floorTexture.wrapT = wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+    floorTexture.repeat.set(2.4, 4.5); wallTexture.repeat.set(3, 1);
+    floorData.repeat.copy(floorTexture.repeat); wallData.repeat.copy(wallTexture.repeat);
+    this.floorMaterial = this.pool.material({ map: floorTexture, roughnessMap: floorData, bumpMap: floorData, bumpScale: .006, roughness: .93, color: 0xffffff });
+    this.floorMaterial.name = 'decor.floor.commercial';
+    this.wallMaterial = this.pool.material({ map: wallTexture, roughnessMap: wallData, bumpMap: wallData, bumpScale: .003, roughness: .9, color: 0xffffff });
+    this.wallMaterial.name = 'decor.wall.painted';
+    this.contactMaterial = this.pool.own(new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: contactTexture, transparent: true, opacity: .2, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    this.contactMaterial.name = 'decor.contact.ambient';
   }
 
   private material(name: string, parameters: THREE.MeshStandardMaterialParameters): THREE.MeshStandardMaterial {
@@ -88,17 +130,31 @@ export class RoomDecorationKit {
     return material;
   }
 
-  private texture(name: string, base: string, detail: (context: CanvasRenderingContext2D, random: () => number) => void): THREE.CanvasTexture {
+  private texture(name: string, base: string, detail: (context: CanvasRenderingContext2D, random: () => number) => void, size = 256): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 256;
+    canvas.width = canvas.height = size;
     const context = canvas.getContext('2d')!;
     context.fillStyle = base;
-    context.fillRect(0, 0, 256, 256);
+    context.fillRect(0, 0, size, size);
+    context.scale(size / 256, size / 256);
     detail(context, makeDeterministicRandom(`room-decoration:${name}`));
     const texture = this.pool.own(new THREE.CanvasTexture(canvas));
     texture.name = `decor.texture.${name}`;
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = 8;
+    return texture;
+  }
+
+  private dataTexture(source: THREE.CanvasTexture): THREE.DataTexture {
+    const canvas = source.image as HTMLCanvasElement;
+    const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+    const texture = this.pool.own(new THREE.DataTexture(pixels, canvas.width, canvas.height, THREE.RGBAFormat, THREE.UnsignedByteType));
+    texture.name = `${source.name}.data`;
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.wrapS = source.wrapS; texture.wrapT = source.wrapT;
+    texture.repeat.copy(source.repeat); texture.anisotropy = Math.max(8, source.anisotropy);
+    texture.magFilter = THREE.LinearFilter; texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.generateMipmaps = true; texture.needsUpdate = true;
     return texture;
   }
 

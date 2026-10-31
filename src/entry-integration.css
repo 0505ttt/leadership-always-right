@@ -1,6 +1,8 @@
 /* Main-game mounting and isolation for the delivered entry experience. */
 #entry-root { position: fixed; inset: 0; z-index: 20; overflow: auto; background: #fafaf8; color: #111212; }
 #entry-root[hidden] { display: none !important; }
+.demo-entry-note { position: fixed; z-index: 30; right: 20px; bottom: 18px; max-width: min(420px, calc(100vw - 40px)); margin: 0; padding: 10px 14px; border: 1px solid #111212; border-radius: 10px; background: #fafaf8f2; color: #111212; font: 600 15px/1.5 system-ui; pointer-events: none; }
+@media (max-height: 470px) and (orientation: landscape) { .demo-entry-note { right: 12px; bottom: 10px; font-size: 13px; padding: 7px 10px; } }
 body.entry-open { overflow: auto; background: #fafaf8; }
 body:not(.entry-open) {
   overflow: hidden;

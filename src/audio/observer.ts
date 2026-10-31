@@ -11,7 +11,7 @@ export function createAudioObserver(audio:OfficeAudio){
   const speech=(role:VoiceRole,line:VoiceLineId,text?:string,p?:{x:number;z:number})=>events.push({id:`${state.seed}:${++serial}`,kind:'speech',speech:{role,line,text},source:p?source(state,query,p):undefined});
   for(const entry of state.eventLog){if(seen.has(entry))continue;seen.add(entry);if(!active)continue;
    const e=entry.event,parts=e.split(':');
-   if(parts[0]==='rule'&&['warning','active','ended'].includes(parts[2])){const rule=state.rules.find(r=>r.kind===parts[1]);events.push({id:`${state.seed}:${++serial}`,kind:'rule',rule:parts[1] as 'cake',phase:parts[2]==='ended'?'restore':parts[2] as 'warning'|'active',text:parts[2]==='warning'?rule?.quote:undefined,source:source(state,query,state.boss)});}
+   if(parts[0]==='rule'&&['warning','active','ended'].includes(parts[2])){const rule=state.rules.find(r=>r.kind===parts[1]);events.push({id:`${state.seed}:${++serial}`,kind:'rule',rule:parts[1] as import('./types').AudioRule,phase:parts[2]==='ended'?'restore':parts[2] as 'warning'|'active',text:parts[2]==='warning'?rule?.quote:undefined,source:source(state,query,state.boss)});}
    else if(e.startsWith('inspection:announced'))speech('leader-broadcast','inspect');
    else if(e==='inspection:empty-search')speech('leader-search','empty-desk',undefined,state.boss);
    else if(e==='boss:caught')speech('leader-near','caught',undefined,state.boss);

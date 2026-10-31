@@ -1,7 +1,7 @@
 /** Presentation-only audio contracts. No type or callback can mutate game state. */
 export type AudioRoom = 'work' | 'meeting' | 'front' | 'tea' | 'boss' | 'storage' | 'admin' | 'print';
 export type MusicMood = 'office' | 'inspection' | 'pursuit' | 'release' | 'success' | 'computer';
-export type AudioRule = 'cake' | 'desk' | 'pot' | 'return' | 'flow' | 'transparent' | 'pressure';
+export type AudioRule = 'cake' | 'desk' | 'pot' | 'return' | 'flow' | 'transparent' | 'pressure' | 'bed';
 export interface AudioPosition { x: number; y: number; z: number }
 export interface SoundSource {
   position?: AudioPosition;

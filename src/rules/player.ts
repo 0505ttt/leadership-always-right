@@ -99,7 +99,7 @@ function candidates(state: GameState, world: WorldDef): Candidate[] {
   for(const station of world.stations)result.push({id:station.id,kind:'clock',label:state.clocked?'已完成下班打卡 · 找出口':`按住 E 打卡 1.5秒${player.protection>0?' · 将结束抓回保护':''}`,duration:1.5,progress:0,point:station,roomId:station.roomId,priority:8});
   for(const exit of world.exits)result.push({id:exit.id,kind:'exit',label:state.openedExits.includes(exit.id)?'门已打开 · 走出去下班':state.clocked?`按住 E 开门 4秒${player.protection>0?' · 将结束抓回保护':''}`:'未完成下班打卡 · 先找到打卡机',duration:4,progress:0,point:exit,roomId:exit.roomId,priority:8});
   for(const room of world.rooms)if(!room.permanentLight)result.push({id:`light-${room.id}`,kind:'light',label:(state.switchCooldown[room.id]??0)>0?`开关复位中 · ${Math.ceil(state.switchCooldown[room.id])}秒`:`按住 E ${state.lights[room.id]?'关灯 · 暗室不能抓人':'开灯'} · 0.25秒`,duration:.25,progress:0,point:room.switch,roomId:room.id,priority:6});
-  for(const prop of state.props)if(!prop.held&&!runtimeFor(state).propFlights.has(prop.id))result.push({id:prop.id,kind:prop.large?'push':'prop',label:prop.large?'按住 E 推动大饼 · WASD 选择方向':`E 拿起${prop.kind==='cake'?'小饼':'纸箱'}`,duration:0,progress:0,point:prop,roomId:prop.roomId,priority:4});
+  for(const prop of state.props)if(prop.kind!=='bed'&&!prop.held&&!runtimeFor(state).propFlights.has(prop.id))result.push({id:prop.id,kind:prop.large?'push':'prop',label:prop.large?'按住 E 推动大饼 · WASD 选择方向':`E 拿起${prop.kind==='cake'?'小饼':'纸箱'}`,duration:0,progress:0,point:prop,roomId:prop.roomId,priority:4});
   for(const desk of world.desks) {
     if(state.colleagues.some(c=>c.deskId===desk.id))continue;
     const raised=(state.deskHeights[desk.id]??.75)>.85;

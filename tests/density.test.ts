@@ -57,6 +57,6 @@ describe('functional office density',()=>{
   }
  },60_000);
  it('keeps the fallback furniture layout with the new intro cake',()=>{
-  const world=generateWorld(618);expect(world.desks).toHaveLength(7);expect(world.colleagues).toHaveLength(4);expect(world.props).toHaveLength(5);expect(world.patrol).toHaveLength(10);
+  const world=generateWorld(618);expect(world.desks).toHaveLength(7);expect(world.colleagues).toHaveLength(4);expect(world.props).toHaveLength(6);expect(world.props.filter(prop=>prop.kind==='bed')).toHaveLength(1);expect(world.patrol).toHaveLength(10);
  });
 });

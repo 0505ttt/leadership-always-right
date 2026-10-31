@@ -20,7 +20,7 @@ export function resolveCamera(world:WorldDef,state:GameState,focus:Point3,desire
   for(const w of world.walls)if(inside(p,w,.14)&&p.y<w.height+.12&&(!w.crawl||p.y>.83))return true;
   for(const decoration of world.decorationColliders??[])if(inside(p,decoration,.14)&&p.y<decoration.height+.12)return true;
   for(const d of world.desks){const h=state.deskHeights[d.id]??.75;if(inside(p,{...d,w:1.6,d:.85},.14)&&Math.abs(p.y-h)<.2)return true;}
-  for(const prop of state.props)if(!prop.held&&(prop.y??0)<.1){const size=prop.kind==='box'?.55:.6*prop.scale,h=prop.kind==='box'?.55:DIMENSIONS.cakeHeight*prop.scale;if(inside(p,{...prop,w:size,d:size},.12)&&p.y<h+.12)return true;}
+  for(const prop of state.props)if(!prop.held&&!prop.dormant&&(prop.y??0)<.1){const w=prop.kind==='box'?.55:prop.kind==='bed'?DIMENSIONS.bedWidth:.6*prop.scale,d=prop.kind==='box'?.55:prop.kind==='bed'?DIMENSIONS.bedDepth:.6*prop.scale,h=prop.kind==='box'?.55:prop.kind==='bed'?DIMENSIONS.bedHeight:DIMENSIONS.cakeHeight*prop.scale;if(inside(p,{...prop,w,d},.12)&&p.y<h+.12)return true;}
   for(const e of world.exits)if(!state.openedExits.includes(e.id)){const r={x:e.x+e.outward.x*.65,z:e.z+e.outward.z*.65,w:e.outward.x?.2:2.4,d:e.outward.z?.2:2.4};if(inside(p,r,.14)&&p.y<2.42)return true;}
   return false;
  };

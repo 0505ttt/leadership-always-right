@@ -1,4 +1,4 @@
-import type { ColleagueDef, Desk, Door, Exit, Room, Vec2, Wall, WorldDef } from '../contracts/game';
+import type { ColleagueDef, Desk, Door, Exit, Prop, Room, Vec2, Wall, WorldDef } from '../contracts/game';
 import { deskWorkingPoint } from './workstations';
 
 export function seeded(seed:number) {
@@ -99,12 +99,14 @@ export function generateWorld(seed:number):WorldDef {
  // Movable props occupy service-room slots, away from workstation banks and
  // mandatory operating points. All four cakes may enlarge without sealing a room.
  const serviceRooms=rooms.filter(room=>room.kind!=='work');
- const props=layout?[
+ const props:Prop[]=layout?[
   ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`cake-${index}`,kind:'cake' as const,roomId:room.id,...local(room.id,6.8,11.8)})),
   ...shuffled(serviceRooms,variation).slice(0,4).map((room,index)=>({id:`box-${index}`,kind:'box' as const,roomId:room.id,...local(room.id,2.6,6)})),
  ]:[{id:'cake-0',kind:'cake' as const,roomId:2,x:26.4,z:10.8},{id:'cake-1',kind:'cake' as const,roomId:7,x:26.6,z:26},{id:'box-0',kind:'box' as const,roomId:7,x:21.5,z:30},{id:'box-1',kind:'box' as const,roomId:4,x:41,z:8}];
  // A clear central intro slot, separate from doorways and all workstation banks.
  props.push({id:'cake-intro',kind:'cake',roomId:desks[0].roomId,x:desks[0].seat.x,z:layout?Math.floor(desks[0].roomId/5)*rd+10.6:desks[0].seat.z-4.5});
+ const bedRoom=rooms.find(room=>room.kind==='meeting')!;
+ props.push({id:'bed-home',kind:'bed',roomId:bedRoom.id,...local(bedRoom.id,7.6,3.6)});
  const workStops=rooms.filter(room=>room.kind==='work').sort((a,b)=>Number(b.id===layout?.home)-Number(a.id===layout?.home)).map(room=>{
   const desk=desks.find(item=>item.roomId===room.id&&!item.home)!;
   return {x:desk.x+(desk.x<room.x?1.8:-1.8),z:desk.seat.z};

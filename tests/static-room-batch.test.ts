@@ -4,7 +4,7 @@ import { createRoomDecorations } from '../src/presentation/room-decorations';
 import { generateWorld } from '../src/world/generate';
 import { createGame } from '../src/rules/game';
 
-const context = new Proxy({ measureText: () => ({ width: 20 }), createLinearGradient: () => ({ addColorStop() {} }) }, { get: (target, key) => key in target ? target[key as keyof typeof target] : () => {} });
+const context = new Proxy({ measureText: () => ({ width: 20 }), createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }) }, { get: (target, key) => key in target ? target[key as keyof typeof target] : () => {} });
 vi.stubGlobal('document', { createElement: () => ({ getContext: () => context }) });
 afterEach(() => vi.unstubAllGlobals());
 

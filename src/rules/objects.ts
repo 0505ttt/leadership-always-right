@@ -68,7 +68,7 @@ export function updateAim(state: GameState, query: WorldQuery): void {
   else state.aimTarget = state.player.potInHand ? '没有目标 · 投空后锅会回到你身上' : '投掷方向 · 最远6米';
 }
 
-const propRadius = (prop:PropState):number => Math.SQRT2*(prop.kind==='box'?.275:.3*prop.scale);
+const propRadius = (prop:PropState):number => prop.kind==='bed'?Math.hypot(DIMENSIONS.bedWidth/2,DIMENSIONS.bedDepth/2):Math.SQRT2*(prop.kind==='box'?.275:.3*prop.scale);
 
 function clearOfActors(state:GameState,point:Vec2,radius:number):boolean {
   return [state.player,state.boss,...state.colleagues].every(actor=>distance(actor,point)>radius+.32);

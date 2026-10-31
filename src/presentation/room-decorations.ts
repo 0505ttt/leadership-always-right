@@ -84,6 +84,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
   const floorSolids: Footprint[] = [];
   const roomStats = new Map<number, { placed: number; signs: number; colliders: number }>();
   const wallReservations = new Map<string, Interval[]>();
+  const rugRooms = new Set<number>();
 
   const baseObstacles: Footprint[] = [
     ...world.desks.flatMap<Footprint>(desk => {
@@ -108,7 +109,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       w: .85, d: .85, id: `switch-operating:${room.id}`,
     })),
     ...world.patrol.map<Footprint>((point, index) => ({ x: point.x, z: point.z, w: .85, d: .85, id: `patrol:${index}` })),
-    ...world.props.map<Footprint>(prop => ({ x: prop.x, z: prop.z, w: prop.kind === 'cake' ? 1.8 : .85, d: prop.kind === 'cake' ? 1.8 : .85, id: prop.id })),
+    ...world.props.map<Footprint>(prop => ({ x: prop.x, z: prop.z, w: prop.kind === 'cake' ? 1.8 : prop.kind === 'bed' ? 2.05 : .85, d: prop.kind === 'cake' ? 1.8 : prop.kind === 'bed' ? 1.25 : .85, id: prop.id })),
     ...world.stations.flatMap<Footprint>(station => [
       { x: station.x, z: station.z, w: 1.35, d: 1.35, id: station.id },
       { x: station.x + Math.sin(station.yaw) * .55, z: station.z + Math.cos(station.yaw) * .55, w: .75, d: .75, id: `${station.id}:machine` },
@@ -257,6 +258,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       colliders.push({ id, roomId: room.id, x: position.x, z: position.z, ...size, height: spec.h, yaw, note: spec.note ?? '真实落地陈设候选；由 Codex 实测并统一登记碰撞。' });
       roomStats.get(room.id)!.colliders++;
     }
+    if (spec.visualOnly && (id.includes('rug') || id.includes('zone'))) rugRooms.add(room.id);
     roomStats.get(room.id)!.placed++;
     return group;
   }
@@ -563,6 +565,47 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     partitionBoards(room);
     focusPoints.push({ roomId: room.id, kind: 'overview', position: [room.x + 3.7, 6.8, room.z + 6.8], target: [room.x, .65, room.z] });
   }
+
+  function finishSurfaces(): void {
+    const plane = pool.geometry('decor-finish-plane', () => new THREE.PlaneGeometry(1, 1));
+    const dummy = new THREE.Object3D();
+    const floors = new THREE.InstancedMesh(plane, kit.floorMaterial, world.rooms.length);
+    floors.name = 'room-floor-finish'; floors.userData.visualOnly = true; floors.userData.measureExclude = true;
+    floors.castShadow = false; floors.receiveShadow = true;
+    for (let index = 0; index < world.rooms.length; index++) {
+      const room = world.rooms[index];
+      dummy.position.set(room.x, .001, room.z); dummy.rotation.set(-Math.PI / 2, 0, 0); dummy.scale.set(room.w, room.d, 1); dummy.updateMatrix();
+      floors.setMatrixAt(index, dummy.matrix);
+    }
+    floors.instanceMatrix.needsUpdate = true; root.add(floors);
+    const contacts = new THREE.InstancedMesh(plane, kit.contactMaterial, colliders.length);
+    contacts.name = 'room-contact-shadows'; contacts.userData.visualOnly = true; contacts.userData.measureExclude = true;
+    contacts.castShadow = contacts.receiveShadow = false;
+    for (let index = 0; index < colliders.length; index++) {
+      const collider = colliders[index];
+      dummy.position.set(collider.x, rugRooms.has(collider.roomId) ? .016 : .004, collider.z);
+      dummy.rotation.set(-Math.PI / 2, 0, collider.yaw);
+      dummy.scale.set(collider.w * 1.24, collider.d * 1.24, 1); dummy.updateMatrix();
+      contacts.setMatrixAt(index, dummy.matrix);
+    }
+    contacts.instanceMatrix.needsUpdate = true; root.add(contacts);
+    for (const room of world.rooms) {
+      const candidates = wallSides(room, true).flatMap(side => side.intervals.map(interval => ({ side, interval })));
+      if (!candidates.length) continue;
+      const { side, interval } = candidates.reduce((best, item) => item.interval.hi - item.interval.lo > best.interval.hi - best.interval.lo ? item : best);
+      const width = Math.min(4.8, interval.hi - interval.lo), along = (interval.lo + interval.hi) / 2;
+      const frame = new THREE.Group(); frame.name = `wall-finish:${room.id}`;
+      frame.position.copy(wallPosition(side, along, .31, .007)); frame.rotation.y = side.yaw;
+      frame.userData.visualOnly = true; frame.userData.measureExclude = true;
+      kit.box(frame, kit.wallMaterial, [width, .58, .012], [0, 0, 0]);
+      kit.box(frame, kit.materials.dark, [width, .024, .016], [0, .302, 0]);
+      frame.traverse(object => { if (object instanceof THREE.Mesh) object.castShadow = false; });
+      root.add(frame);
+      wallBindings.push({ object: frame, wallId: side.wall.id, roomId: room.id, baseY: .31, height: .62 });
+      wallAttachments.push({ id: frame.name, roomId: room.id, wallId: side.wall.id, position: [frame.position.x, frame.position.y, frame.position.z], width, height: .62 });
+    }
+  }
+  finishSurfaces();
 
   for (const attachment of wallAttachments) {
     const room = world.rooms.find(item => item.id === attachment.roomId)!;

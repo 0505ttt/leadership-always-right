@@ -13,11 +13,12 @@ const routeCaches = new WeakMap<WorldDef, Map<string, RouteCacheEntry>>();
 const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.z - b.z);
 
 function volume(prop: PropState, point: Vec2, scale: number): { rect: Rect; radius: number; height: number } {
-  const half = prop.kind === 'box' ? .275 : .3 * scale;
+  const w = prop.kind === 'box' ? .55 : prop.kind === 'bed' ? DIMENSIONS.bedWidth : .6 * scale;
+  const d = prop.kind === 'box' ? .55 : prop.kind === 'bed' ? DIMENSIONS.bedDepth : .6 * scale;
   return {
-    rect: { x: point.x, z: point.z, w: half * 2, d: half * 2 },
-    radius: Math.SQRT2 * half,
-    height: prop.kind === 'box' ? .55 : DIMENSIONS.cakeHeight * scale,
+    rect: { x: point.x, z: point.z, w, d },
+    radius: Math.hypot(w / 2, d / 2),
+    height: prop.kind === 'box' ? .55 : prop.kind === 'bed' ? DIMENSIONS.bedHeight : DIMENSIONS.cakeHeight * scale,
   };
 }
 
@@ -110,9 +111,9 @@ export function safePropPlacement(
   if (!Number.isFinite(point.x + point.z + scale) || scale <= 0) return false;
   const { rect, radius, height } = volume(prop, point, scale);
   if (!clearOfActors(state, rect, height) || !clearOfWorkstations(world, rect)) return false;
-  const previous = { x: prop.x, z: prop.z, scale: prop.scale, held: prop.held, y: prop.y };
+  const previous = { x: prop.x, z: prop.z, scale: prop.scale, held: prop.held, y: prop.y, dormant: prop.dormant };
   try {
-    prop.x = point.x; prop.z = point.z; prop.scale = scale; prop.y = 0;
+    prop.x = point.x; prop.z = point.z; prop.scale = scale; prop.y = 0; prop.dormant = false;
     // Exclude the candidate itself for the broad static query, then include it
     // for path certification against every other current and measured solid.
     prop.held = true;
@@ -121,6 +122,6 @@ export function safePropPlacement(
     prop.held = false;
     return certifiedRoutes(state, world, query, prop, point, scale);
   } finally {
-    prop.x = previous.x; prop.z = previous.z; prop.scale = previous.scale; prop.held = previous.held; prop.y = previous.y;
+    prop.x = previous.x; prop.z = previous.z; prop.scale = previous.scale; prop.held = previous.held; prop.y = previous.y; prop.dormant = previous.dormant;
   }
 }
