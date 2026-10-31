@@ -132,8 +132,8 @@ function slider(key: keyof Settings, label: string, value: number, min: number, 
   return `<label class="setting setting--range"><span>${label}<output>${value.toFixed(2).replace(/0$/, '')}×</output></span><input type="range" data-setting="${key}" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
 }
 
-function volumeSlider(key: keyof Settings, label: string, value: number): string {
-  return `<label class="setting setting--range"><span>${label}<output>${value.toFixed(2).replace(/0$/, '')}</output></span><input type="range" data-setting="${key}" min="0" max="1" step=".05" value="${value}"></label>`;
+function volumeSlider(key: keyof Settings, label: string, value: number, max = 1): string {
+  return `<label class="setting setting--range"><span>${label}<output>${value.toFixed(2).replace(/0$/, '')}</output></span><input type="range" data-setting="${key}" min="0" max="${max}" step=".05" value="${value}"></label>`;
 }
 
 export function renderDepartureSettings(model: UIModel): string {
@@ -147,9 +147,9 @@ export function renderDepartureSettings(model: UIModel): string {
         <label class="setting"><span>画面质量<small>改变场景细节与渲染开销</small></span><select data-setting="quality"><option value="low" ${value.quality === 'low' ? 'selected' : ''}>流畅</option><option value="medium" ${value.quality === 'medium' ? 'selected' : ''}>均衡</option><option value="high" ${value.quality === 'high' ? 'selected' : ''}>精细</option></select></label>
         ${slider('sensitivity', '鼠标灵敏度', value.sensitivity, .25, 3, .05)}
         ${slider('textScale', '文字大小', value.textScale, .85, 1.4, .05)}
-        ${volumeSlider('musicVolume', '音乐', value.musicVolume ?? .4)}
-        ${volumeSlider('effectsVolume', '环境与动作音效', value.effectsVolume ?? .75)}
-        ${volumeSlider('voiceVolume', '人物语音', value.voiceVolume ?? .85)}
+        ${volumeSlider('musicVolume', '音乐', value.musicVolume ?? .4, .4)}
+        <label class="setting"><span>环境与动作音效<small>已关闭</small></span></label>
+        <label class="setting"><span>人物语音<small>已关闭</small></span></label>
         <label class="setting"><span>反转纵向视角<small>反转鼠标上下观察方向</small></span><input class="switch" type="checkbox" data-setting="invertY" ${value.invertY ? 'checked' : ''}></label>
         <label class="setting"><span>减弱非必要动效<small>减少装饰呼吸与位移动效</small></span><input class="switch" type="checkbox" data-setting="reducedMotion" ${value.reducedMotion ? 'checked' : ''}></label>
       </div>

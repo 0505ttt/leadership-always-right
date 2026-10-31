@@ -1,4 +1,5 @@
 import type { GameState, Rect, Room, Vec2, WorldDef, WorldQuery } from '../contracts/game';
+import { DIMENSIONS } from '../contracts/game';
 const navigationDirections=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]] as const;
 export const distance=(a:Vec2,b:Vec2)=>Math.hypot(a.x-b.x,a.z-b.z);
 /** Actor destination in front of the control; the wall-mounted control itself is not walkable. */
@@ -29,7 +30,11 @@ export function makeWorldQuery(world:WorldDef):WorldQuery {
   for(const decoration of world.decorationColliders??[])if((vision?height:feet)<decoration.height)rows.push(decoration);
   for(const e of world.exits)if(!state.openedExits.includes(e.id)) rows.push({x:e.x+e.outward.x*.65,z:e.z+e.outward.z*.65,w:e.outward.x? .2:2.4,d:e.outward.z?.2:2.4});
   for(const d of world.desks){const h=state.deskHeights[d.id]??.75;if(vision?height>=h-.12&&height<=h:height+feet>h-.12&&feet<h)rows.push({x:d.x,z:d.z,w:1.6,d:.85});}
-  for(const p of state.props){if(p.held||(p.y??0)>.15)continue;const size=p.kind==='box'?.55:.6*p.scale;if(vision?height<(p.kind==='box'?.62:.4*p.scale):feet<(p.kind==='box'?.55:.4*p.scale))rows.push({x:p.x,z:p.z,w:size,d:size});}
+  for(const p of state.props){if(p.held||(p.y??0)>.15)continue;const size=p.kind==='box'?.55:.6*p.scale;
+   // Flatten the rendered pie and its physical support, not the established
+   // rule-level sight mask that makes an enlarged pie a counterplay object.
+   const obstacleHeight=p.kind==='box'?(vision?.62:.55):(vision?.4:DIMENSIONS.cakeHeight)*p.scale;
+   if((vision?height:feet)<obstacleHeight)rows.push({x:p.x,z:p.z,w:size,d:size});}
   return rows;
  }
  function free(p:Vec2,radius:number,height:number,state:GameState,feet=0){
@@ -44,11 +49,13 @@ export function makeWorldQuery(world:WorldDef):WorldQuery {
   move(p,delta,radius,height,state,feet=0){let out={x:p.x,z:p.z};const steps=Math.max(1,Math.ceil(Math.hypot(delta.x,delta.z)/.12));const dx=delta.x/steps,dz=delta.z/steps;for(let i=0;i<steps;i++){const both={x:out.x+dx,z:out.z+dz};if(free(both,radius,height,state,feet)){out=both;continue;}const x={x:out.x+dx,z:out.z};if(free(x,radius,height,state,feet))out=x;const z={x:out.x,z:out.z+dz};if(free(z,radius,height,state,feet))out=z;}return out;},
   lineOfSight(a,b,height,state,mode='vision'){return !solids(height,state,true,0,mode==='vision').some(r=>segmentRect(a,b,r));},
   validPlacement(p,radius,state){if(!free(p,radius,1.75,state))return false;if(distance(p,world.spawn)<1.5)return false;return ![...world.doors,...world.exits,...world.stations,...world.rooms.map(r=>r.switch)].some(d=>distance(p,d)<radius+1.6);},
-  supportHeight(p,state){const overlaps=(r:Rect)=>{const dx=Math.max(Math.abs(p.x-r.x)-r.w/2,0),dz=Math.max(Math.abs(p.z-r.z)-r.d/2,0);return dx*dx+dz*dz<.3*.3;};let y=0;for(const prop of state.props)if(!prop.held&&(prop.y??0)<.1&&overlaps({...prop,w:prop.kind==='box'?.55:.6*prop.scale,d:prop.kind==='box'?.55:.6*prop.scale}))y=Math.max(y,prop.kind==='box'?.55:.4*prop.scale);for(const d of world.desks)if(overlaps({...d,w:1.6,d:.85}))y=Math.max(y,state.deskHeights[d.id]??.75);for(const decoration of world.decorationColliders??[])if(overlaps(decoration))y=Math.max(y,decoration.height);return y;},
+  supportHeight(p,state){const overlaps=(r:Rect)=>{const dx=Math.max(Math.abs(p.x-r.x)-r.w/2,0),dz=Math.max(Math.abs(p.z-r.z)-r.d/2,0);return dx*dx+dz*dz<.3*.3;};let y=0;for(const prop of state.props)if(!prop.held&&(prop.y??0)<.1&&overlaps({...prop,w:prop.kind==='box'?.55:.6*prop.scale,d:prop.kind==='box'?.55:.6*prop.scale}))y=Math.max(y,prop.kind==='box'?.55:DIMENSIONS.cakeHeight*prop.scale);for(const d of world.desks)if(overlaps({...d,w:1.6,d:.85}))y=Math.max(y,state.deskHeights[d.id]??.75);for(const decoration of world.decorationColliders??[])if(overlaps(decoration))y=Math.max(y,decoration.height);return y;},
   clearance(p,state){let h=Infinity;for(const w of world.walls)if(w.crawl&&inside(p,w,.31))h=Math.min(h,.95);for(const d of world.desks)if(inside(p,{...d,w:1.6,d:.85},.3)&&((p as Vec2 & {y?:number}).y??0)<(state.deskHeights[d.id]??.75))h=Math.min(h,(state.deskHeights[d.id]??.75)-.1);const room=roomAt(p);if(room&&state.pressureRooms.includes(room.id))h=Math.min(h,state.pressureHeights[room.id]??1.6);return h;},
   path(a,b,state){
+   // Keep the established occupancy grid for narrow routes. Only line-of-
+   // travel smoothing reserves the follower's .06m waypoint arrival tolerance.
    const radius=.3-1e-6,height=1.75,rs=solids(height,state);
-   const clear=(p:Vec2,q:Vec2)=>!rs.some(r=>segmentRect(p,q,r,radius));
+   const clear=(p:Vec2,q:Vec2)=>!rs.some(r=>segmentRect(p,q,r,.36));
    if(clear(a,b))return [{...b}];
    const cell=.4,cols=Math.ceil(world.width/cell)+1,rows=Math.ceil(world.depth/cell)+1,total=cols*rows;
    // Reuse only occupancy, never a route. Snapshot numbers so in-place solid changes invalidate too.
@@ -58,7 +65,7 @@ export function makeWorldQuery(world:WorldDef):WorldQuery {
    const openCell=navigationCache.cells;
    const pos=(id:number)=>({x:(id%cols)*cell,z:Math.floor(id/cols)*cell});
    const walk=(id:number)=>{if(id<0||id>=total)return false;if(openCell[id]!==0)return openCell[id]===1;const p=pos(id);const ok=p.x>=radius&&p.z>=radius&&p.x<=world.width-radius&&p.z<=world.depth-radius&&!rs.some(r=>circleHitsRect(p,r,radius));openCell[id]=ok?1:-1;return ok;};
-   const nearest=(p:Vec2)=>{const x=Math.round(p.x/cell),z=Math.round(p.z/cell);let best=-1,dist=Infinity;for(let dz=-4;dz<=4;dz++)for(let dx=-4;dx<=4;dx++){const cx=x+dx,cz=z+dz;if(cx<0||cx>=cols||cz<0||cz>=rows)continue;const id=cz*cols+cx;if(!walk(id))continue;const q=pos(id),d=distance(p,q);if(d<dist&&clear(p,q)){best=id;dist=d;}}return best;};
+   const nearest=(p:Vec2)=>{const x=Math.round(p.x/cell),z=Math.round(p.z/cell);let best=-1,dist=Infinity;for(let dz=-4;dz<=4;dz++)for(let dx=-4;dx<=4;dx++){const cx=x+dx,cz=z+dz;if(cx<0||cx>=cols||cz<0||cz>=rows)continue;const id=cz*cols+cx;if(!walk(id))continue;const q=pos(id),d=distance(p,q);if(d<dist&&!rs.some(r=>segmentRect(p,q,r,.3-1e-6))){best=id;dist=d;}}return best;};
    const start=nearest(a),end=nearest(b);if(start<0||end<0)return [];
    const g=new Float32Array(total);g.fill(Infinity);g[start]=0;const parents=new Int32Array(total);parents.fill(-1);const closed=new Uint8Array(total);
    // Binary heap keeps navigation bounded without scanning the entire frontier each expansion.

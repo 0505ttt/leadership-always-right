@@ -1,4 +1,5 @@
 import type { GameState, InputFrame, Pot, PropState, Vec2, WorldDef, WorldQuery } from '../contracts/game';
+import { DIMENSIONS } from '../contracts/game';
 import { announceMessage, clamp, copyPoint, distance, explicitAction, forward, lerp, logEvent, runtimeFor } from './runtime';
 import { safePropPlacement } from './prop-safety';
 
@@ -81,7 +82,7 @@ function safeRestPoint(state:GameState,world:WorldDef,query:WorldQuery,point:Vec
 }
 
 function nearbyLanding(state:GameState,world:WorldDef,query:WorldQuery,origin:Vec2,prop:PropState):Vec2|null {
-  const radius=propRadius(prop),height=prop.kind==='box'?.55:.4*prop.scale;
+  const radius=propRadius(prop),height=prop.kind==='box'?.55:DIMENSIONS.cakeHeight*prop.scale;
   let routeChecks=0;
   // A landing is independent of the player's current facing. Check all sides,
   // within a small bounded radius, without moving the prop across a wall.

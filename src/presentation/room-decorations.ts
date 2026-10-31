@@ -336,6 +336,9 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     model.position.set(...position);
     model.rotation.y = yaw;
     model.userData.visualOnly = false;
+    // Countertop foliage is a local visual detail; the cabinet already reserves
+    // the whole footprint. Do not inflate it into a room-height blocking box.
+    if (id === 'plant-v1' && position[1] > 0) model.userData.measureExclude = true;
     parent.add(model);
     return true;
   }
@@ -394,8 +397,10 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
       parts.push(seat(x, -1.05, 0), seat(x, 1.05, Math.PI));
     }
     parts.push(seat(-2.12, 0, Math.PI / 2), seat(2.12, 0, -Math.PI / 2));
+    const media = kit.cabinet(1.65, .5, .68, 2);
+    if (!room.pressure) addModel(media, 'plant-v1', [.48, .72, 0]);
     parts.push(
-      { id: 'media', object: kit.cabinet(1.65, .5, .68, 2), spec: { w: 1.65, d: .5, h: .75, note: '低媒体柜；不作为中央隔断。' }, offset: { x: 0, z: -2.05 } },
+      { id: 'media', object: media, spec: { w: 1.65, d: .5, h: room.pressure ? .75 : 1.95, note: '低媒体柜与既有绿植；不作为中央隔断。' }, offset: { x: 0, z: -2.05 } },
       { id: 'rug', object: kit.rug(5.25, 3.35), spec: { w: 5.25, d: 3.35, h: .014, visualOnly: true, note: '会议组薄地毯，纯视觉。' }, offset: { x: 0, z: .05 } },
     );
     placeAssembly(room, `meeting-set:${room.id}`, parts, { x: room.x - .3, z: room.z + 1.2 });
@@ -443,6 +448,7 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     const counter = kit.cabinet(2.15, .61, .86, 3);
     for (const x of [-.63, -.42, -.21]) addModel(counter, 'mug-v1', [x, .9, .08]);
     addModel(counter, 'stationery-v1', [.61, .9, .03]);
+    if (!room.pressure) addModel(counter, 'plant-v1', [.82, .9, -.05]);
     const splash = kit.sign({ text: '杯架｜洗净后排回杯柄朝右', width: 1.62, height: .18, fontSize: 48, frame: false, background: '#c4c8b9', foreground: '#405046' });
     splash.position.set(0, 1.18, -.295); splash.rotation.y = Math.PI; counter.add(splash);
     placeNearWall(room, `tea-counter:${room.id}`, counter, { w: 2.15, d: .61, h: 1.22, note: '茶水低柜与杯架；柜前不作为通路。' });
@@ -463,13 +469,10 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
 
   function boss(room: Room): void {
     mount(room, `boss-award:${room.id}`, kit.sign({ text: '年度最具解释权领导\n获奖理由：定义始终稳定\n除非定义需要调整', width: 2.35, height: .92, lines: ['年度最具解释权领导', '获奖理由：定义始终稳定', '除非定义需要调整'], fontSize: 54, foreground: '#ead8ae', background: '#303b37' }), 2.35, .92, 1.53, 'material');
-    const background = new THREE.Group();
-    if (!addModel(background, 'storage-shelf-v1', [0, 0, 0])) {
-      background.add(kit.shelf(1.8, .36, 1.55, 4));
-      for (let index = 0; index < 3; index++) addModel(background, 'paper-stack-v1', [-.52 + index * .52, .59, 0], index * .06);
-      addModel(background, 'box-v1', [.48, .17, 0]);
-    }
-    placeNearWall(room, `boss-background:${room.id}`, background, { w: 1.8, d: .36, h: 1.82, note: '总经理室实体背景货架；使用既有满架模型。' });
+    const background = kit.shelf(1.8, .36, 1.55, 4);
+    for (let index = 0; index < 3; index++) addModel(background, 'paper-stack-v1', [-.52 + index * .52, .59, 0], index * .06);
+    addModel(background, 'box-v1', [.48, .17, 0]);
+    placeNearWall(room, `boss-background:${room.id}`, background, { w: 1.8, d: .36, h: 1.55, note: '总经理室开放背景陈列；与普通低柜形成不同轮廓。' });
     const left = kit.stool(), right = kit.stool(); left.rotation.y = right.rotation.y = Math.PI;
     placeAssembly(room, `boss-talk:${room.id}`, [
       { id: 'visitor-left', object: left, spec: { w: .46, d: .47, h: .88, note: '访客席；保留上下座与绕行动线。' }, offset: { x: -1.0, z: 0 } },
@@ -505,15 +508,14 @@ export function createRoomDecorations(world: WorldDef, options: RoomDecorationOp
     if (isProduct) addModel(table, 'box-v1', [.35, tableY, 0]);
     else addModel(table, 'stationery-v1', [.42, tableY, .04]);
     const shelfHeight = room.pressure ? .96 : 1.35;
-    const shelf = room.pressure ? kit.shelf(isProduct ? .9 : 1.0, .34, shelfHeight, 3) : new THREE.Group();
-    if (room.pressure) addModel(shelf, 'paper-stack-v1', [0, .18, 0]);
-    else if (!addModel(shelf, 'storage-shelf-v1', [0, 0, 0])) shelf.add(kit.shelf(isProduct ? .9 : 1.0, .34, shelfHeight, 3));
-    const shelfSpecHeight = room.pressure ? shelfHeight + .22 : 1.82;
+    const shelf = kit.shelf(isProduct ? .9 : 1.0, .34, shelfHeight, 3);
+    addModel(shelf, 'paper-stack-v1', [0, .18, 0]);
+    const shelfSpecHeight = shelfHeight + .22;
     const bench = kit.bench(1.35);
+    placeNearWall(room, `work-shelf:${room.id}`, shelf, { w: isProduct ? .9 : 1.0, d: .34, h: shelfSpecHeight, note: `${copy.pin[0]}实体资料货架；作为独立背景组。` });
     const preferred = isGrowth ? { x: room.x + 1.4, z: room.z + 1.2 } : isProduct ? { x: room.x - 1.5, z: room.z - 1.2 } : { x: room.x - 1.6, z: room.z + 1.5 };
     placeAssembly(room, `work-island:${room.id}`, [
       { id: 'table', object: table, spec: { w: isGrowth ? 2.4 : isProduct ? 1.55 : 1.85, d: tableDepth, h: isGrowth || isProduct ? .96 : 1.12, note: `${copy.title}功能组。` }, offset: { x: 0, z: 0 } },
-      { id: 'shelf', object: shelf, spec: { w: isProduct ? .9 : 1.0, d: .34, h: shelfSpecHeight, note: `${copy.pin[0]}实体资料货架。` }, offset: { x: isGrowth ? 1.85 : isProduct ? 1.5 : 1.65, z: -.4 } },
       { id: 'bench', object: bench, spec: { w: 1.35, d: .58, h: .86, note: '协作软凳；保留起身和绕行空间。' }, offset: { x: -.25, z: 1.1 } },
       { id: 'rug', object: kit.rug(isGrowth ? 3.4 : 3.0, 2.35), spec: { w: isGrowth ? 3.4 : 3.0, d: 2.35, h: .014, visualOnly: true, note: '部门组团薄地毯，纯视觉。' }, offset: { x: .25, z: .35 } },
     ], preferred);

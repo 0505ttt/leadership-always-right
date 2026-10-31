@@ -26,8 +26,12 @@ const version=__BUILD_COMMIT__;
 const runtimeAssets=new RuntimeAssets();
 const characterLibrary=createCharacterLibrary({assets:runtimeAssets});
 const runtimeSpecs=runtimeAssetSpecs(import.meta.env.BASE_URL,version);
-const defaults:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1,musicVolume:.4,effectsVolume:.75,voiceVolume:.85};
+const defaults:Settings={quality:'medium',sensitivity:1,invertY:false,reducedMotion:false,textScale:1,musicVolume:.4,effectsVolume:0,voiceVolume:0};
 let settings={...defaults};try{const saved=JSON.parse(localStorage.getItem('leadership-settings')??'null');if(saved&&typeof saved==='object')settings={...defaults,...saved};}catch{/* A blocked/corrupt preference store must not prevent local gameplay. */}
+settings.effectsVolume=0;
+settings.voiceVolume=0;
+settings.musicVolume=Math.max(0,Math.min(.4,settings.musicVolume??.4));
+try{localStorage.setItem('leadership-settings',JSON.stringify(settings));}catch{/* Preferences are optional. */}
 let loadingSeed=freshSeed(),world=generateWorld(loadingSeed),state=createGame(world),query=makeWorldQuery(world),page:Page='loading';
 let tutorialPage=0,phone=false,loadingStage='',error='',settingsReturn:Page='home',lastPausedAt=-Infinity,visualAssetsReady=false;
 let scene:OfficeScene,input:GameInput,ui:{render:(m:UIModel)=>void;destroy:()=>void};
@@ -130,7 +134,11 @@ function command(cmd:UICommand){
    const v=cmd.value;if(cmd.key==='quality'&&['low','medium','high'].includes(String(v)))settings.quality=v as Settings['quality'];
    else if(cmd.key==='sensitivity')settings.sensitivity=Math.max(.25,Math.min(3,Number(v)||1));
    else if(cmd.key==='textScale')settings.textScale=Math.max(.85,Math.min(1.4,Number(v)||1));
-   else if(['musicVolume','effectsVolume','voiceVolume'].includes(cmd.key)){settings[cmd.key as 'musicVolume'|'effectsVolume'|'voiceVolume']=Math.max(0,Math.min(1,Number(v)||0));audio.setVolumes({music:settings.musicVolume,effects:settings.effectsVolume,voice:settings.voiceVolume});}
+   else if(['musicVolume','effectsVolume','voiceVolume'].includes(cmd.key)){
+    if(cmd.key==='musicVolume')settings.musicVolume=Math.max(0,Math.min(.4,Number(v)||0));
+    else settings[cmd.key as 'effectsVolume'|'voiceVolume']=0;
+    audio.setVolumes({music:settings.musicVolume,effects:0,voice:0});
+   }
    else if(cmd.key==='invertY'||cmd.key==='reducedMotion')settings[cmd.key]=Boolean(v);
    input.updateSettings(settings);scene.updateSettings(settings);try{localStorage.setItem('leadership-settings',JSON.stringify(settings));}catch{/* Preferences are optional. */}show();break;
   }

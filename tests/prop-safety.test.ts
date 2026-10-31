@@ -78,4 +78,11 @@ describe('final-volume prop safety', () => {
     for (let frame = 0; frame < 60; frame++) expect(safe(f, { x: 15, z: 15 })).toBe(true);
     expect(searches).toBe(initial);
   });
+
+  it('uses the flat pie thickness for support instead of the old cake height', () => {
+    const f = fixture();
+    expect(f.query.supportHeight(f.cake, f.state)).toBeCloseTo(.12, 8);
+    f.cake.scale = 3;
+    expect(f.query.supportHeight(f.cake, f.state)).toBeCloseTo(.36, 8);
+  });
 });

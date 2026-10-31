@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Desk, Exit, GameState, Station, WorldDef } from '../contracts/game';
+import { DIMENSIONS } from '../contracts/game';
 import { deskWorkingPoint } from '../world/workstations';
 import { VisualResourcePool, addBox, addCylinder, makeDeterministicRandom, makeLabel } from './visual-utils';
 
@@ -265,6 +266,7 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
   for (const prop of world.props) {
     const object = prop.kind === 'cake' ? cakeVisual(pool, options.models?.('cake-v2')) : options.models?.('box-v1')??boxVisual(pool);
     object.name = `world-prop:${prop.id}`;
+    if (prop.kind === 'cake') object.scale.y = DIMENSIONS.cakeHeight / .4;
     object.position.set(prop.x, 0, prop.z);
     root.add(object);
     props.set(prop.id, object);
@@ -314,7 +316,8 @@ export function createOfficePropVisuals(world: WorldDef, options: { assets?: Pro
       for (const prop of state.props) {
         const visual = props.get(prop.id);
         if (!visual) continue;
-        visual.scale.setScalar(prop.scale);
+        if (prop.kind === 'cake') visual.scale.set(prop.scale, prop.scale * DIMENSIONS.cakeHeight / .4, prop.scale);
+        else visual.scale.setScalar(prop.scale);
         if (prop.held) {
           const hand = anchors('player', 'hand');
           if (hand) {

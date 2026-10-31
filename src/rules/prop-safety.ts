@@ -1,4 +1,5 @@
 import type { GameState, PropState, Rect, Vec2, WorldDef, WorldQuery } from '../contracts/game';
+import { DIMENSIONS } from '../contracts/game';
 import { deskWorkingPoint } from '../world/workstations';
 
 const ACTOR_RADIUS = .3;
@@ -16,7 +17,7 @@ function volume(prop: PropState, point: Vec2, scale: number): { rect: Rect; radi
   return {
     rect: { x: point.x, z: point.z, w: half * 2, d: half * 2 },
     radius: Math.SQRT2 * half,
-    height: prop.kind === 'box' ? .55 : .4 * scale,
+    height: prop.kind === 'box' ? .55 : DIMENSIONS.cakeHeight * scale,
   };
 }
 

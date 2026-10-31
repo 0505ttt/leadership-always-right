@@ -79,7 +79,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('mounts cake-v2 at its authored bottom origin and scales its real geometry from rule state', async () => {
+it('mounts cake-v2 as a flat pie while preserving its bottom origin and rule-driven footprint', async () => {
   const { models, instances } = await fixture(), world = propWorld(), state = createGame(world);
   const visuals = createOfficePropVisuals(world, { models });
   cleanups.push(() => visuals.dispose());
@@ -95,10 +95,12 @@ it('mounts cake-v2 at its authored bottom origin and scales its real geometry fr
     const snapshot = JSON.stringify(state);
     visuals.update(state, () => undefined);
     expect(JSON.stringify(state)).toBe(snapshot);
-    expect(visual.scale.toArray()).toEqual([scale, scale, scale]);
+    expect(visual.scale.x).toBeCloseTo(scale, 8);
+    expect(visual.scale.y).toBeCloseTo(scale * .3, 8);
+    expect(visual.scale.z).toBeCloseTo(scale, 8);
     const measured = bounds(visual);
     expect(measured.size.x).toBeCloseTo(.6 * scale, 5);
-    expect(measured.size.y).toBeCloseTo(.4 * scale, 5);
+    expect(measured.size.y).toBeCloseTo(.12 * scale, 5);
     expect(measured.size.z).toBeCloseTo(.6 * scale, 5);
     expect(measured.box.min.y).toBeCloseTo(.75, 5);
     expect(measured.box.getCenter(new THREE.Vector3()).x).toBeCloseTo(3, 5);
@@ -197,11 +199,11 @@ it.each([undefined, () => undefined])('preserves standalone preview fallback and
   const world = propWorld(), state = createGame(world), visuals = createOfficePropVisuals(world, { models });
   cleanups.push(() => visuals.dispose());
   const cake = state.props[0], visual = visuals.props.get(cake.id)!;
-  expect(bounds(visual).size.y).toBeGreaterThan(.3);
+  expect(bounds(visual).size.y).toBeLessThan(.15);
   cake.scale = 2;
   state.openedExits = [world.exits[0].id];
   visuals.update(state, () => undefined);
-  expect(visual.scale.toArray()).toEqual([2, 2, 2]);
+  expect(visual.scale.toArray()).toEqual([2, .6, 2]);
   expect(visuals.exits.get(world.exits[0].id)!.visible).toBe(false);
   expect(visuals.root.getObjectByName(`exit-sign:${world.exits[0].id}`)).toBeDefined();
 });
