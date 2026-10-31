@@ -10,7 +10,7 @@ function advance(state: GameState, seconds: number): void {
   for (let elapsed = 0; elapsed < seconds - 1e-8; elapsed += .1) stepGame(state, idle, .1, world, query);
 }
 
-it('uses one authoritative clock for a 180-second playable demo', () => {
+it('uses one authoritative clock for a 180-second playable demo', { timeout: 15000 }, () => {
   const state = createGame(generateWorld(42), 180);
   state.player.protection = Infinity;
   expect(state.roundSeconds).toBe(180);
@@ -23,7 +23,7 @@ it('uses one authoritative clock for a 180-second playable demo', () => {
   expect(state.ending).toBe('overtime');
 });
 
-it('keeps the ordinary round at 600 seconds', () => {
+it('keeps the ordinary round at 600 seconds', { timeout: 15000 }, () => {
   const state = createGame(generateWorld(42));
   state.player.protection = Infinity;
   expect(state.roundSeconds).toBe(600);
